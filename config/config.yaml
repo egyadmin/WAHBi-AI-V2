@@ -1,0 +1,46 @@
+# إعدادات نظام تحليل المناقصات
+app:
+  name: "نظام تحليل المناقصات وسلاسل الإمداد"
+  company: "شركة شبه الجزيرة للمقاولات"
+  version: "1.0.0"
+  debug: true
+
+# إعدادات قاعدة البيانات
+database:
+  type: "sqlite"
+  path: "./data/tenders.db"
+
+# إعدادات الملفات
+files:
+  upload_dir: "./data/uploads"
+  max_size_mb: 50
+  allowed_extensions:
+    - ".pdf"
+    - ".docx"
+    - ".xlsx"
+    - ".csv"
+    - ".json"
+
+# إعدادات النماذج
+models:
+  language_model: "arabic-bert-base"
+  cache_dir: "./models/cache"
+  embeddings_path: "./models/embeddings"
+
+# إعدادات المحتوى المحلي
+local_content:
+  default_threshold: 40
+  calculation_method: "weighted_average"
+  nitaqat_integration: true
+
+# إعدادات التقارير
+reports:
+  export_dir: "./reports"
+  templates_dir: "./web/templates/reports"
+
+# إعدادات التسجيل
+logging:
+  level: "INFO"
+  file: "./logs/app.log"
+  max_size_mb: 10
+  backup_count: 5
