@@ -1,0 +1,74 @@
+/* تنسيقات خاصة بدعم اللغة العربية والكتابة من اليمين إلى اليسار */
+
+/* اتجاه الصفحة من اليمين إلى اليسار */
+body {
+    direction: rtl;
+    text-align: right;
+}
+
+/* إعادة تعيين محاذاة العناصر */
+.stTextInput, .stNumberInput, .stDateInput, .stTimeInput, .stTextArea, .stSelectbox {
+    direction: rtl;
+    text-align: right;
+}
+
+/* محاذاة الشريط الجانبي */
+.css-1q8dd3e {
+    direction: rtl;
+    text-align: right;
+}
+
+/* محاذاة القوائم المنسدلة */
+.css-16huue1 {
+    direction: rtl;
+    text-align: right;
+}
+
+/* تعديل محاذاة الأزرار */
+button {
+    direction: rtl;
+}
+
+/* محاذاة المقاييس والعدادات */
+.stMetric {
+    text-align: right;
+}
+
+/* تعديلات للجداول */
+table {
+    direction: rtl;
+    text-align: right;
+}
+
+th, td {
+    text-align: right;
+}
+
+/* تعديلات للرسوم البيانية */
+.plotly .gtitle, .plotly .xtitle, .plotly .ytitle, .plotly .annotation-text {
+    direction: rtl;
+    text-align: right;
+}
+
+/* تعديلات لمربعات الاختيار */
+.stCheckbox > label > div:first-child {
+    margin-left: 0.5rem;
+    margin-right: 0;
+}
+
+/* تعديلات للقوائم والنقاط */
+ul, ol {
+    padding-right: 1.5rem;
+    padding-left: 0;
+}
+
+/* تعديلات للأيقونات */
+.icon-text {
+    flex-direction: row-reverse;
+}
+
+/* تعديلات للهوامش والمسافات البادئة */
+.stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+    direction: rtl;
+    text-align: right;
+}
