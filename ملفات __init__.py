@@ -1,5 +1,5 @@
-mkdir -p /home/user/app/web/pages
-mkdir -p /home/user/app/web/components
-mkdir -p /home/user/app/web/styles
-mkdir -p /home/user/app/config
-mkdir -p /home/user/app/utils
+# إنشاء ملف __init__.py في كل مجلد
+touch /home/user/app/web/__init__.py
+touch /home/user/app/web/pages/__init__.py
+touch /home/user/app/web/components/__init__.py
+touch /home/user/app/utils/__init__.py
