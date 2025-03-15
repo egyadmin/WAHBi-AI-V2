@@ -1,0 +1,205 @@
+# إعدادات نماذج التوقع المستقبلي للمناقصات والمشاريع
+# شركة شبه الجزيرة للمقاولات
+# مهندس التطوير: م. تامر الجوهري
+
+# إعدادات عامة
+general:
+  company_name: "شركة شبه الجزيرة للمقاولات"
+  default_confidence_level: 0.95  # مستوى الثقة الافتراضي للتوقعات
+  timezone: "Asia/Riyadh"
+  language: "ar"
+  confidence_threshold: 0.7  # الحد الأدنى المقبول لمستوى الثقة
+
+# إعدادات البيانات
+data:
+  tenders_path: "data/processed/tenders.csv"
+  contracts_path: "data/processed/contracts.csv"
+  projects_path: "data/processed/projects.csv"
+  municipalities_path: "data/processed/municipalities.csv"
+  transport_path: "data/processed/transport.csv"
+  investment_fund_path: "data/processed/investment_fund.csv"
+  results_path: "data/prediction_results/"
+  data_update_frequency: "daily"  # daily, weekly, monthly
+  historical_data_window: 5  # عدد السنوات للبيانات التاريخية
+
+# إعدادات نماذج التوقع
+prediction_models:
+  # نموذج تصنيف المناقصات
+  classification:
+    model_path: "models/trained/tender_classifier"
+    model_type: "transformer"
+    base_model: "aubmindlab/arabert-base-v2"
+    num_labels: 5
+    threshold: 0.6
+    categories:
+      - "بنية تحتية"
+      - "مباني"
+      - "طرق"
+      - "مياه وصرف صحي"
+      - "كهرباء"
+  
+  # نموذج السلاسل الزمنية للتوقع المستقبلي
+  time_series:
+    model_path: "models/trained/time_series/prophet_model.json"
+    model_type: "prophet"
+    forecast_periods: 24  # عدد الأشهر للتوقع
+    retraining_frequency: "monthly"  # تردد إعادة التدريب
+    seasonality:
+      yearly: true
+      weekly: true
+      daily: false
+      fiscal_year_start: 7  # شهر بداية السنة المالية (يوليو)
+    uncertainty_samples: 1000
+  
+  # نموذج توقع المشاريع المستقبلية
+  project_prediction:
+    model_path: "models/trained/project_prediction/catboost_model"
+    model_type: "catboost"
+    categorical_features:
+      - "project_type"
+      - "sector"
+      - "region"
+      - "client_type"
+      - "contractor_classification"
+    numeric_features:
+      - "budget"
+      - "duration"
+      - "num_competitors"
+      - "local_content_percentage"
+      - "similar_projects_count"
+      - "previous_projects_count"
+
+  # نموذج التوقع المالي
+  financial:
+    model_path: "models/trained/financial/xgboost_model.json"
+    model_type: "xgboost"
+    target_metrics:
+      - "profit_margin"
+      - "cash_flow"
+      - "roi"
+    features:
+      - "project_size"
+      - "project_duration"
+      - "sector"
+      - "client_type"
+      - "competition_level"
+      - "material_costs"
+      - "labor_costs"
+  
+  # نموذج تحليل المنافسة
+  competition_analysis:
+    model_path: "models/trained/competition/lightgbm_model.txt"
+    model_type: "lightgbm"
+    competitors_database: "data/templates/competitors_database.json"
+    market_share_threshold: 0.15
+    competitor_strength_threshold: 0.7
+
+# إعدادات التدريب
+training:
+  batch_size: 16
+  learning_rate: 2e-5
+  num_epochs: 5
+  validation_split: 0.2
+  early_stopping_patience: 3
+  max_seq_length: 512
+  use_mixed_precision: true
+  use_gpu: true
+  seed: 42
+  cross_validation_folds: 5
+
+# إعدادات التقييم
+evaluation:
+  evaluation_metric: "f1"  # accuracy, f1, precision, recall, rmse, mae
+  test_size: 0.2
+  confidence_intervals: true
+  confusion_matrix: true
+  feature_importance: true
+  output_metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+    - "f1"
+    - "r2"
+    - "mae"
+
+# إعدادات الجهات الحكومية
+government_entities:
+  # صندوق الاستثمارات العامة
+  investment_fund:
+    name: "صندوق الاستثمارات العامة"
+    api_endpoint: "https://api.pif.gov.sa/tenders"
+    projects_database: "data/government/pif_projects.csv"
+    forecast_weight: 0.35
+    sectors:
+      - "سياحة وترفيه"
+      - "تقنية المعلومات"
+      - "طاقة متجددة"
+      - "لوجيستيات"
+      - "تطوير عقاري"
+  
+  # البلديات
+  municipalities:
+    name: "البلديات"
+    api_endpoint: "https://api.momrah.gov.sa/municipalities"
+    projects_database: "data/government/municipalities_projects.csv"
+    forecast_weight: 0.25
+    regions:
+      - "الرياض"
+      - "مكة المكرمة"
+      - "المدينة المنورة"
+      - "الشرقية"
+      - "عسير"
+      - "تبوك"
+      - "حائل"
+      - "القصيم"
+      - "جازان"
+      - "نجران"
+      - "الباحة"
+      - "الجوف"
+      - "الحدود الشمالية"
+  
+  # وزارة النقل
+  transport:
+    name: "وزارة النقل"
+    api_endpoint: "https://api.mot.gov.sa/tenders"
+    projects_database: "data/government/transport_projects.csv"
+    forecast_weight: 0.25
+    project_types:
+      - "طرق"
+      - "جسور"
+      - "أنفاق"
+      - "مطارات"
+      - "موانئ"
+      - "سكك حديدية"
+
+  # جهات أخرى
+  other_entities:
+    name: "جهات حكومية أخرى"
+    projects_database: "data/government/other_projects.csv"
+    forecast_weight: 0.15
+
+# إعدادات تصدير التوقعات
+export:
+  formats:
+    - "csv"
+    - "excel"
+    - "pdf"
+    - "json"
+  report_template: "data/templates/prediction_report_template.docx"
+  logo_path: "web/assets/logos/peninsula_logo.png"
+  include_charts: true
+  include_tables: true
+  include_executive_summary: true
+
+# إعدادات الإشعارات
+notifications:
+  enabled: true
+  channels:
+    - "email"
+    - "dashboard"
+    - "mobile"
+  high_potential_threshold: 0.8  # عتبة المشاريع ذات الاحتمالية العالية
+  notification_frequency: "daily"  # daily, weekly
+  recipients:
+    - "projects@peninsula-contracting.com"
+    - "management@peninsula-contracting.com"
