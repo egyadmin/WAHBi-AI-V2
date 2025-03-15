@@ -321,4 +321,250 @@ def show_local_content_calculator():
         if labor_local_percentage < 70:
             recommendations.append("زيادة نسبة العمالة المحلية من خلال التوظيف المباشر أو التعاقد مع شركات محلية.")
         
-        if materials_
+        if materials_local_percentage < 50:
+            recommendations.append("زيادة نسبة المواد المحلية من خلال البحث عن موردين محليين أو استبدال المواد المستوردة بمواد محلية.")
+        
+        if services_local_percentage < 60:
+            recommendations.append("الاعتماد بشكل أكبر على مقدمي الخدمات المحليين والاستعانة بالشركات الوطنية.")
+        
+        if equipment_local_percentage < 30:
+            recommendations.append("محاولة استئجار المعدات من مصادر محلية بدلاً من شرائها من الخارج.")
+        
+        for i, rec in enumerate(recommendations):
+            st.markdown(f"{i+1}. {rec}")
+        
+        if not recommendations:
+            st.markdown("يمكن تحسين النسبة من خلال إعادة توزيع مكونات المشروع وزيادة الاعتماد على المصادر المحلية.")
+
+def show_local_vendors():
+    """
+    عرض الموردين المحليين
+    """
+    st.markdown("## قاعدة بيانات الموردين المحليين")
+    
+    # إنشاء بيانات توضيحية للموردين
+    vendors_data = {
+        "اسم المورد": [
+            "شركة الصناعات السعودية",
+            "مؤسسة الخليج للمقاولات",
+            "شركة الرياض للإنشاءات",
+            "الشركة العربية للمعدات",
+            "مصنع المنتجات الإسمنتية",
+            "شركة تقنيات البناء",
+            "مؤسسة المدار للتوريدات",
+            "شركة البنية التحتية المتكاملة",
+            "مصنع الصلب السعودي",
+            "شركة الأنابيب الوطنية"
+        ],
+        "القطاع": [
+            "صناعة", "مقاولات", "إنشاءات", "معدات", "مواد بناء", 
+            "تقنيات بناء", "توريدات", "بنية تحتية", "صناعات معدنية", "أنابيب"
+        ],
+        "المنطقة": [
+            "الرياض", "الشرقية", "مكة المكرمة", "المدينة المنورة", "القصيم",
+            "الشرقية", "الرياض", "جدة", "ينبع", "الجبيل"
+        ],
+        "تصنيف نطاقات": [
+            "بلاتيني", "أخضر مرتفع", "أخضر متوسط", "بلاتيني", "أخضر مرتفع",
+            "أخضر متوسط", "أخضر منخفض", "بلاتيني", "أخضر مرتفع", "أخضر متوسط"
+        ],
+        "نسبة السعودة (%)": [
+            65, 42, 35, 55, 38, 30, 25, 60, 45, 40
+        ],
+        "التقييم": [
+            4.8, 4.2, 3.9, 4.6, 4.0, 3.7, 3.5, 4.5, 4.3, 4.1
+        ]
+    }
+    
+    vendors_df = pd.DataFrame(vendors_data)
+    
+    # البحث في قاعدة البيانات
+    st.markdown("### البحث في قاعدة بيانات الموردين")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        search_name = st.text_input("البحث باسم المورد", "")
+    
+    with col2:
+        selected_sector = st.selectbox(
+            "القطاع",
+            ["الكل"] + sorted(vendors_df["القطاع"].unique().tolist())
+        )
+    
+    with col3:
+        selected_region = st.selectbox(
+            "المنطقة",
+            ["الكل"] + sorted(vendors_df["المنطقة"].unique().tolist())
+        )
+    
+    # تطبيق التصفية
+    filtered_df = vendors_df.copy()
+    
+    if search_name:
+        filtered_df = filtered_df[filtered_df["اسم المورد"].str.contains(search_name, case=False)]
+    
+    if selected_sector != "الكل":
+        filtered_df = filtered_df[filtered_df["القطاع"] == selected_sector]
+    
+    if selected_region != "الكل":
+        filtered_df = filtered_df[filtered_df["المنطقة"] == selected_region]
+    
+    # عرض نتائج البحث
+    st.markdown(f"### نتائج البحث ({len(filtered_df)} مورد)")
+    st.dataframe(filtered_df, use_container_width=True)
+    
+    # عرض إحصائيات الموردين
+    st.markdown("### إحصائيات الموردين المحليين")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # توزيع الموردين حسب المنطقة
+        region_counts = vendors_df["المنطقة"].value_counts().reset_index()
+        region_counts.columns = ["المنطقة", "عدد الموردين"]
+        
+        fig1 = px.pie(
+            region_counts, 
+            values="عدد الموردين", 
+            names="المنطقة",
+            title="توزيع الموردين حسب المنطقة",
+            color_discrete_sequence=px.colors.qualitative.Bold
+        )
+        
+        fig1.update_traces(textposition="inside", textinfo="percent+label")
+        
+        st.plotly_chart(fig1, use_container_width=True)
+    
+    with col2:
+        # توزيع الموردين حسب تصنيف نطاقات
+        nitaqat_counts = vendors_df["تصنيف نطاقات"].value_counts().reset_index()
+        nitaqat_counts.columns = ["تصنيف نطاقات", "عدد الموردين"]
+        
+        # ترتيب تصنيف نطاقات
+        nitaqat_order = {"بلاتيني": 1, "أخضر مرتفع": 2, "أخضر متوسط": 3, "أخضر منخفض": 4, "أصفر": 5, "أحمر": 6}
+        nitaqat_counts["الترتيب"] = nitaqat_counts["تصنيف نطاقات"].map(nitaqat_order)
+        nitaqat_counts = nitaqat_counts.sort_values("الترتيب")
+        
+        # اختيار الألوان حسب التصنيف
+        nitaqat_colors = {
+            "بلاتيني": "#7B68EE", "أخضر مرتفع": "#228B22", "أخضر متوسط": "#32CD32", 
+            "أخضر منخفض": "#90EE90", "أصفر": "#FFD700", "أحمر": "#FF4500"
+        }
+        
+        fig2 = px.bar(
+            nitaqat_counts, 
+            x="تصنيف نطاقات", 
+            y="عدد الموردين",
+            color="تصنيف نطاقات",
+            color_discrete_map=nitaqat_colors,
+            title="توزيع الموردين حسب تصنيف نطاقات"
+        )
+        
+        st.plotly_chart(fig2, use_container_width=True)
+    
+    # قسم إضافة مورد جديد
+    st.markdown("### إضافة مورد جديد")
+    
+    with st.expander("إضافة مورد جديد إلى قاعدة البيانات"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            new_vendor_name = st.text_input("اسم المورد")
+            new_vendor_sector = st.selectbox("القطاع", sorted(vendors_df["القطاع"].unique().tolist()))
+            new_vendor_region = st.selectbox("المنطقة", sorted(vendors_df["المنطقة"].unique().tolist()))
+        
+        with col2:
+            new_vendor_nitaqat = st.selectbox(
+                "تصنيف نطاقات",
+                ["بلاتيني", "أخضر مرتفع", "أخضر متوسط", "أخضر منخفض", "أصفر", "أحمر"]
+            )
+            new_vendor_saudization = st.slider("نسبة السعودة (%)", 0, 100, 30)
+            new_vendor_rating = st.slider("التقييم", 1.0, 5.0, 3.5, 0.1)
+        
+        if st.button("إضافة المورد"):
+            st.success(f"تم إضافة المورد {new_vendor_name} بنجاح!")
+
+def show_vision_requirements():
+    """
+    عرض متطلبات رؤية 2030
+    """
+    st.markdown("## متطلبات المحتوى المحلي في رؤية السعودية 2030")
+    
+    # نص توضيحي
+    st.markdown("""
+    تعد زيادة المحتوى المحلي أحد الأهداف الاستراتيجية الرئيسية لرؤية السعودية 2030، وذلك من خلال:
+    
+    - تعزيز المحتوى المحلي في المشتريات الحكومية
+    - دعم الصناعات الوطنية والمنتجات المحلية
+    - توطين الوظائف والتقنيات
+    - تطوير سلاسل الإمداد المحلية
+    - تعزيز المشاركة والاستثمار من القطاع الخاص
+    """)
+    
+    # الأهداف الرئيسية
+    st.markdown("### الأهداف الرئيسية للمحتوى المحلي في رؤية 2030")
+    
+    goals_data = {
+        "المؤشر": [
+            "نسبة المحتوى المحلي في القطاع غير النفطي",
+            "نسبة الإنفاق المحلي في المشتريات الحكومية",
+            "نسبة توطين الوظائف في القطاع الخاص",
+            "عدد المنشآت الصغيرة والمتوسطة المشاركة في سلاسل الإمداد",
+            "نسبة مساهمة المنشآت الصغيرة والمتوسطة في الناتج المحلي"
+        ],
+        "الوضع الحالي": [35, 45, 26, 1200, 22],
+        "المستهدف 2025": [50, 60, 35, 3000, 30],
+        "المستهدف 2030": [70, 80, 60, 5000, 35]
+    }
+    
+    goals_df = pd.DataFrame(goals_data)
+    
+    st.table(goals_df)
+    
+    # رسم بياني للأهداف
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        x=goals_df["المؤشر"],
+        y=goals_df["الوضع الحالي"],
+        name="الوضع الحالي",
+        marker_color='#1976D2'
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=goals_df["المؤشر"],
+        y=goals_df["المستهدف 2025"],
+        name="المستهدف 2025",
+        marker_color='#FFC107'
+    ))
+    
+    fig.add_trace(go.Bar(
+        x=goals_df["المؤشر"],
+        y=goals_df["المستهدف 2030"],
+        name="المستهدف 2030",
+        marker_color='#43A047'
+    ))
+    
+    fig.update_layout(
+        title="مؤشرات المحتوى المحلي في رؤية 2030",
+        xaxis_title="المؤشر",
+        yaxis_title="القيمة (%)",
+        barmode='group',
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # متطلبات المحتوى المحلي حسب القطاع
+    st.markdown("### متطلبات المحتوى المحلي حسب القطاع")
+    
+    sectors_data = {
+        "القطاع": ["النفط والغاز", "الكهرباء", "المياه", "الاتصالات", "النقل", "البناء والتشييد", "التعليم", "الصحة"],
+        "الحد الأدنى للم
