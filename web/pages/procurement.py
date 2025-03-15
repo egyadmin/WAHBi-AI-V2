@@ -1,536 +1,521 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+from datetime import datetime
+import os
+import sys
 
-def show_procurement():
-    """
-    عرض صفحة إدارة المشتريات والعقود
-    """
-    st.subheader("إدارة المشتريات والعقود")
-    
-    # الخيارات الفرعية
-    tabs = st.tabs(["العقود النشطة", "أوامر الشراء", "المناقصات الداخلية", "تقييم الموردين"])
-    
-    # تبويب العقود النشطة
-    with tabs[0]:
-        show_active_contracts()
-    
-    # تبويب أوامر الشراء
-    with tabs[1]:
-        show_purchase_orders()
-    
-    # تبويب المناقصات الداخلية
-    with tabs[2]:
-        show_internal_tenders()
-    
-    # تبويب تقييم الموردين
-    with tabs[3]:
-        show_vendor_evaluation()
+# إضافة المسار الرئيسي للمشروع إلى PATH
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-def show_active_contracts():
-    """
-    عرض بيانات العقود النشطة
-    """
-    st.markdown("## العقود النشطة")
-    
-    # إنشاء بيانات توضيحية للعقود
-    current_date = datetime.now().date()
-    
-    contracts_data = {
-        "رقم العقد": ["C-2025-1001", "C-2025-1042", "C-2024-0987", "C-2024-0912", "C-2025-1123", 
-                     "C-2024-0875", "C-2025-1088", "C-2025-1156", "C-2024-0932", "C-2025-1201"],
-        "المورد": ["شركة الصناعات السعودية", "مؤسسة الخليج للمقاولات", "شركة الرياض للإنشاءات",
-                  "الشركة العربية للمعدات", "مصنع المنتجات الإسمنتية", "شركة تقنيات البناء",
-                  "مؤسسة المدار للتوريدات", "شركة البنية التحتية المتكاملة", "مصنع الصلب السعودي",
-                  "شركة الأنابيب الوطنية"],
-        "نوع العقد": ["توريد مواد", "مقاولات", "خدمات هندسية", "تأجير معدات", "توريد مواد",
-                     "خدمات فنية", "توريد مواد", "مقاولات", "توريد مواد", "توريد مواد"],
-        "تاريخ البدء": [
-            current_date - timedelta(days=120),
-            current_date - timedelta(days=90),
-            current_date - timedelta(days=210),
-            current_date - timedelta(days=180),
-            current_date - timedelta(days=60),
-            current_date - timedelta(days=240),
-            current_date - timedelta(days=45),
-            current_date - timedelta(days=30),
-            current_date - timedelta(days=150),
-            current_date - timedelta(days=15)
-        ],
-        "تاريخ الانتهاء": [
-            current_date + timedelta(days=245),
-            current_date + timedelta(days=270),
-            current_date + timedelta(days=155),
-            current_date + timedelta(days=185),
-            current_date + timedelta(days=305),
-            current_date + timedelta(days=125),
-            current_date + timedelta(days=320),
-            current_date + timedelta(days=335),
-            current_date + timedelta(days=215),
-            current_date + timedelta(days=350)
-        ],
-        "القيمة (مليون ريال)": [12.5, 28.7, 8.3, 6.2, 9.1, 5.4, 7.8, 15.6, 11.2, 10.9],
-        "نسبة الإنجاز (%)": [45, 30, 75, 65, 20, 80, 15, 10, 60, 5]
+# استيراد الوحدات الخاصة بالمشروع
+from modules.document_processor import DocumentProcessor
+from modules.requirement_analyzer import RequirementAnalyzer
+from modules.cost_risk_analyzer import CostRiskAnalyzer
+from modules.schedule_analyzer import ScheduleAnalyzer
+from modules.local_content import LocalContentCalculator
+from modules.supply_chain import SupplyChainAnalyzer
+from modules.ai_models import LLMProcessor, ArabicBERTModel
+from utils.database import VectorDBConnector, TemplateLoader
+from utils.api_integrations import MunafasatAPI, EtimadAPI, BaladyAPI
+
+# تكوين الصفحة
+st.set_page_config(
+    page_title="تحليل المناقصات والعقود",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# تحديد النمط والتصميم
+st.markdown("""
+<style>
+    .main {
+        direction: rtl;
+        text-align: right;
     }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: #F0F2F6;
+        border-radius: 4px 4px 0px 0px;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+    .css-12oz5g7 {
+        flex-direction: row-reverse;
+    }
+    .css-1v3fvcr {
+        direction: rtl;
+    }
+    .stMarkdown {
+        direction: rtl;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ------------------------------------------------------------------------
+# الدوال المساعدة
+# ------------------------------------------------------------------------
+@st.cache_data(ttl=3600)
+def load_tender_templates():
+    """تحميل قوالب المناقصات من قاعدة البيانات"""
+    template_loader = TemplateLoader()
+    return template_loader.load_tender_templates()
+
+@st.cache_data(ttl=3600)
+def load_supplier_database():
+    """تحميل قاعدة بيانات الموردين"""
+    try:
+        supply_chain = SupplyChainAnalyzer()
+        return supply_chain.get_suppliers_database()
+    except Exception as e:
+        st.error(f"خطأ في تحميل قاعدة بيانات الموردين: {e}")
+        return pd.DataFrame()
+
+def process_uploaded_documents(uploaded_files):
+    """معالجة المستندات المرفوعة"""
+    if not uploaded_files:
+        return None, None
     
-    # إنشاء DataFrame
-    contracts_df = pd.DataFrame(contracts_data)
+    document_processor = DocumentProcessor()
     
-    # إضافة المدة المتبقية
-    contracts_df["المدة المتبقية (يوم)"] = (contracts_df["تاريخ الانتهاء"] - current_date).dt.days
+    extracted_data = {}
+    file_contents = {}
     
-    # تصنيف الحالة
-    conditions = [
-        (contracts_df["المدة المتبقية (يوم)"] < 30),
-        (contracts_df["المدة المتبقية (يوم)"] < 90),
-        (contracts_df["المدة المتبقية (يوم)"] >= 90)
-    ]
-    values = ["على وشك الانتهاء", "متوسطة", "طويلة الأجل"]
-    colors = ["#D32F2F", "#FFC107", "#4CAF50"]
-    
-    contracts_df["حالة العقد"] = np.select(conditions, values)
-    
-    # عرض فلاتر البحث
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        contract_type_filter = st.selectbox(
-            "نوع العقد",
-            ["الكل"] + sorted(contracts_df["نوع العقد"].unique().tolist())
-        )
-    
-    with col2:
-        status_filter = st.selectbox(
-            "حالة العقد",
-            ["الكل"] + sorted(contracts_df["حالة العقد"].unique().tolist())
-        )
-    
-    with col3:
-        min_value = st.number_input("الحد الأدنى للقيمة (مليون ريال)", 0.0, 50.0, 0.0)
-    
-    # تطبيق الفلاتر
-    filtered_df = contracts_df.copy()
-    
-    if contract_type_filter != "الكل":
-        filtered_df = filtered_df[filtered_df["نوع العقد"] == contract_type_filter]
-    
-    if status_filter != "الكل":
-        filtered_df = filtered_df[filtered_df["حالة العقد"] == status_filter]
-    
-    if min_value > 0:
-        filtered_df = filtered_df[filtered_df["القيمة (مليون ريال)"] >= min_value]
-    
-    # عرض العقود المصفاة
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # تحليلات العقود
-    st.markdown("### تحليلات العقود")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # توزيع العقود حسب النوع
-        type_distribution = contracts_df.groupby("نوع العقد")["القيمة (مليون ريال)"].sum().reset_index()
-        
-        fig1 = px.pie(
-            type_distribution,
-            values="القيمة (مليون ريال)",
-            names="نوع العقد",
-            title="توزيع قيمة العقود حسب النوع",
-            color_discrete_sequence=px.colors.qualitative.Bold
-        )
-        
-        fig1.update_traces(textposition="inside", textinfo="percent+label")
-        
-        st.plotly_chart(fig1, use_container_width=True)
-    
-    with col2:
-        # توزيع العقود حسب الحالة
-        status_distribution = contracts_df.groupby("حالة العقد").agg({
-            "رقم العقد": "count",
-            "القيمة (مليون ريال)": "sum"
-        }).reset_index()
-        
-        status_distribution.columns = ["الحالة", "عدد العقود", "إجمالي القيمة (مليون ريال)"]
-        
-        # ترتيب الحالات
-        status_order = {"على وشك الانتهاء": 1, "متوسطة": 2, "طويلة الأجل": 3}
-        status_distribution["الترتيب"] = status_distribution["الحالة"].map(status_order)
-        status_distribution = status_distribution.sort_values("الترتيب")
-        
-        # اختيار الألوان حسب الحالة
-        status_colors = {"على وشك الانتهاء": "#D32F2F", "متوسطة": "#FFC107", "طويلة الأجل": "#4CAF50"}
-        
-        fig2 = px.bar(
-            status_distribution,
-            x="الحالة",
-            y="إجمالي القيمة (مليون ريال)",
-            color="الحالة",
-            text="عدد العقود",
-            title="توزيع العقود حسب المدة المتبقية",
-            color_discrete_map=status_colors
-        )
-        
-        fig2.update_traces(texttemplate="%{text} عقد", textposition="outside")
-        
-        st.plotly_chart(fig2, use_container_width=True)
-    
-    # العقود القريبة من الانتهاء
-    st.markdown("### العقود على وشك الانتهاء")
-    
-    expiring_contracts = contracts_df[contracts_df["المدة المتبقية (يوم)"] < 30].sort_values("المدة المتبقية (يوم)")
-    
-    if not expiring_contracts.empty:
-        for _, contract in expiring_contracts.iterrows():
-            st.markdown(f"""
-            **{contract['رقم العقد']} - {contract['المورد']}**  
-            **نوع العقد:** {contract['نوع العقد']}  
-            **المدة المتبقية:** {contract['المدة المتبقية (يوم)']} يوم  
-            **نسبة الإنجاز:** {contract['نسبة الإنجاز (%)']}%  
-            **القيمة:** {contract['القيمة (مليون ريال)']} مليون ريال
-            """)
+    for file in uploaded_files:
+        try:
+            file_content = file.read()
+            file_extension = file.name.split(".")[-1].lower()
             
-            # شريط التقدم
-            st.progress(contract['نسبة الإنجاز (%)'] / 100)
-            st.markdown("---")
-    else:
-        st.info("لا توجد عقود على وشك الانتهاء خلال الشهر القادم")
+            file_contents[file.name] = file_content
+            processed_data = document_processor.process_document(
+                file_content, 
+                file_extension, 
+                file.name
+            )
+            
+            extracted_data[file.name] = processed_data
+            
+        except Exception as e:
+            st.error(f"خطأ في معالجة الملف {file.name}: {e}")
+    
+    return extracted_data, file_contents
 
-def show_purchase_orders():
-    """
-    عرض أوامر الشراء
-    """
-    st.markdown("## أوامر الشراء")
+def analyze_requirements(extracted_data):
+    """تحليل متطلبات المناقصة"""
+    if not extracted_data:
+        return None
     
-    # إنشاء بيانات توضيحية لأوامر الشراء
-    current_date = datetime.now().date()
+    requirement_analyzer = RequirementAnalyzer()
     
-    po_data = {
-        "رقم أمر الشراء": [f"PO-{2025}-{i:04d}" for i in range(1001, 1011)],
-        "المورد": [
-            "شركة الصناعات السعودية", "مؤسسة الخليج للمقاولات", "شركة الرياض للإنشاءات",
-            "الشركة العربية للمعدات", "مصنع المنتجات الإسمنتية", "شركة تقنيات البناء",
-            "مؤسسة المدار للتوريدات", "شركة البنية التحتية المتكاملة", "مصنع الصلب السعودي",
-            "شركة الأنابيب الوطنية"
-        ],
-        "المشروع": [
-            "مشروع توسعة شبكة الطرق", "بناء المدارس", "تطوير البنية التحتية",
-            "تحديث شبكة المياه", "بناء المستشفى التخصصي", "إنشاء مركز البيانات",
-            "توسعة المطار", "تطوير الحدائق العامة", "بناء المجمع السكني",
-            "تطوير شبكة الصرف الصحي"
-        ],
-        "تاريخ الطلب": [
-            current_date - timedelta(days=np.random.randint(5, 60)) for _ in range(10)
-        ],
-        "تاريخ التسليم المتوقع": [
-            current_date + timedelta(days=np.random.randint(5, 45)) for _ in range(10)
-        ],
-        "القيمة (ريال)": [
-            np.random.randint(50000, 5000000) for _ in range(10)
-        ],
-        "الحالة": np.random.choice(
-            ["جديد", "قيد المعالجة", "تم الشحن", "تم الاستلام", "مغلق"],
-            size=10,
-            p=[0.2, 0.3, 0.2, 0.2, 0.1]
-        )
-    }
+    analyzed_results = {}
+    for file_name, data in extracted_data.items():
+        analyzed_results[file_name] = requirement_analyzer.analyze(data)
     
-    # إنشاء DataFrame
-    po_df = pd.DataFrame(po_data)
+    return analyzed_results
+
+def analyze_local_content(extracted_data, project_data):
+    """تحليل المحتوى المحلي للمناقصة"""
+    if not extracted_data or not project_data:
+        return None
     
-    # عرض فلاتر البحث
-    col1, col2 = st.columns(2)
+    local_content_calculator = LocalContentCalculator()
     
-    with col1:
-        status_filter = st.selectbox(
-            "حالة أمر الشراء",
-            ["الكل"] + sorted(po_df["الحالة"].unique().tolist())
-        )
+    # استخراج بيانات المشروع ذات الصلة
+    project_type = project_data.get("project_type", "")
+    budget = project_data.get("budget", 0)
+    location = project_data.get("location", "")
+    duration = project_data.get("duration", 0)
     
-    with col2:
-        vendor_filter = st.selectbox(
-            "المورد",
-            ["الكل"] + sorted(po_df["المورد"].unique().tolist())
-        )
+    # تحليل المحتوى المحلي
+    local_content_results = local_content_calculator.calculate(
+        extracted_data, 
+        project_type=project_type,
+        budget=budget,
+        location=location,
+        duration=duration
+    )
     
-    # تطبيق الفلاتر
-    filtered_po = po_df.copy()
+    return local_content_results
+
+# ------------------------------------------------------------------------
+# واجهة المستخدم الرئيسية
+# ------------------------------------------------------------------------
+def main():
+    st.title("نظام تحليل المناقصات والعقود")
     
-    if status_filter != "الكل":
-        filtered_po = filtered_po[filtered_po["الحالة"] == status_filter]
-    
-    if vendor_filter != "الكل":
-        filtered_po = filtered_po[filtered_po["المورد"] == vendor_filter]
-    
-    # عرض أوامر الشراء المصفاة
-    st.dataframe(filtered_po, use_container_width=True)
-    
-    # تحليلات أوامر الشراء
-    st.markdown("### تحليلات أوامر الشراء")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # توزيع أوامر الشراء حسب الحالة
-        status_counts = po_df.groupby("الحالة").size().reset_index(name="العدد")
+    # الشريط الجانبي
+    with st.sidebar:
+        st.header("الإعدادات والخيارات")
         
-        fig1 = px.pie(
-            status_counts,
-            values="العدد",
-            names="الحالة",
-            title="توزيع أوامر الشراء حسب الحالة",
-            color_discrete_sequence=px.colors.qualitative.Bold
+        st.subheader("رفع المستندات")
+        uploaded_files = st.file_uploader(
+            "رفع وثائق المناقصة، العقد، أو الملفات ذات الصلة",
+            accept_multiple_files=True,
+            type=["pdf", "docx", "xlsx", "csv", "txt"]
         )
         
-        fig1.update_traces(textposition="inside", textinfo="percent+label")
-        
-        st.plotly_chart(fig1, use_container_width=True)
-    
-    with col2:
-        # قيمة أوامر الشراء حسب المورد
-        vendor_values = po_df.groupby("المورد")["القيمة (ريال)"].sum().reset_index()
-        vendor_values = vendor_values.sort_values("القيمة (ريال)", ascending=False).head(5)
-        
-        fig2 = px.bar(
-            vendor_values,
-            x="المورد",
-            y="القيمة (ريال)",
-            title="أعلى 5 موردين حسب قيمة أوامر الشراء",
-            color="القيمة (ريال)",
-            color_continuous_scale="Viridis"
+        st.subheader("ضبط التحليل")
+        analysis_mode = st.radio(
+            "اختر نمط التحليل:",
+            ["سريع", "متوسط", "متقدم"]
         )
         
-        fig2.update_yaxes(title_text="القيمة (ريال)")
+        use_ai = st.checkbox("استخدام الذكاء الاصطناعي للتحليل المتقدم", value=True)
         
-        st.plotly_chart(fig2, use_container_width=True)
+        # إعدادات متقدمة
+        with st.expander("إعدادات متقدمة"):
+            ai_model = st.selectbox(
+                "نموذج الذكاء الاصطناعي",
+                ["Claude (Anthropic)", "AraGPT", "BERT عربي مخصص"]
+            )
+            
+            similarity_threshold = st.slider(
+                "عتبة التشابه للتوصيات",
+                min_value=0.5,
+                max_value=0.95,
+                value=0.75,
+                step=0.05
+            )
+            
+            supply_chain_depth = st.slider(
+                "عمق تحليل سلسلة الإمداد",
+                min_value=1,
+                max_value=5,
+                value=2,
+                step=1
+            )
+        
+        # زر تحليل
+        analysis_btn = st.button("بدء التحليل", type="primary")
     
-    # إضافة أمر شراء جديد
-    st.markdown("### إضافة أمر شراء جديد")
+    # الأقسام الرئيسية للتطبيق
+    tabs = st.tabs([
+        "نظرة عامة",
+        "تحليل المتطلبات",
+        "تحليل التكاليف والمخاطر",
+        "المحتوى المحلي",
+        "سلسلة الإمداد",
+        "الجدول الزمني",
+        "التوصيات والملخص"
+    ])
     
-    with st.expander("إضافة أمر شراء جديد"):
+    # حالة التطبيق
+    if "project_data" not in st.session_state:
+        st.session_state.project_data = {
+            "project_title": "",
+            "project_type": "",
+            "project_number": "",
+            "budget": 0,
+            "location": "",
+            "duration": 0,
+            "start_date": None,
+            "end_date": None
+        }
+    
+    if "analysis_results" not in st.session_state:
+        st.session_state.analysis_results = None
+    
+    if "extracted_data" not in st.session_state:
+        st.session_state.extracted_data = None
+    
+    # نظرة عامة - القسم الأول
+    with tabs[0]:
+        st.header("معلومات المشروع / المناقصة")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            new_vendor = st.selectbox("المورد", sorted(po_df["المورد"].unique().tolist()))
-            new_project = st.selectbox("المشروع", sorted(po_df["المشروع"].unique().tolist()))
-            new_value = st.number_input("القيمة (ريال)", min_value=1000, max_value=10000000, value=100000)
+            st.session_state.project_data["project_title"] = st.text_input(
+                "عنوان المشروع / المناقصة",
+                value=st.session_state.project_data.get("project_title", "")
+            )
+            
+            st.session_state.project_data["project_type"] = st.selectbox(
+                "نوع المشروع",
+                [
+                    "", "إنشاءات", "تقنية معلومات", "استشارات", 
+                    "توريد معدات", "خدمات", "أخرى"
+                ],
+                index=0
+            )
+            
+            st.session_state.project_data["project_number"] = st.text_input(
+                "رقم المشروع / المناقصة",
+                value=st.session_state.project_data.get("project_number", "")
+            )
+            
+            st.session_state.project_data["budget"] = st.number_input(
+                "الميزانية التقديرية (ريال سعودي)",
+                min_value=0,
+                value=int(st.session_state.project_data.get("budget", 0))
+            )
         
         with col2:
-            new_delivery_date = st.date_input("تاريخ التسليم المتوقع", value=current_date + timedelta(days=30))
-            new_description = st.text_area("وصف الطلب", height=100)
-        
-        if st.button("إضافة أمر الشراء"):
-            st.success(f"تم إضافة أمر الشراء بنجاح للمورد {new_vendor} بقيمة {new_value:,} ريال")
-
-def show_internal_tenders():
-    """
-    عرض المناقصات الداخلية
-    """
-    st.markdown("## المناقصات الداخلية")
-    
-    # إنشاء بيانات توضيحية للمناقصات الداخلية
-    current_date = datetime.now().date()
-    
-    tenders_data = {
-        "رقم المناقصة": [f"IT-{2025}-{i:04d}" for i in range(1001, 1009)],
-        "العنوان": [
-            "توريد معدات بناء ثقيلة",
-            "شراء مواد إنشائية",
-            "خدمات نقل وشحن",
-            "توريد أنظمة تكييف",
-            "خدمات تركيب كهربائية",
-            "توريد محولات كهربائية",
-            "خدمات أمن وسلامة",
-            "توريد أنظمة مراقبة"
-        ],
-        "المشروع": [
-            "مشروع توسعة شبكة الطرق", "بناء المدارس", "تطوير البنية التحتية",
-            "تحديث شبكة المياه", "بناء المستشفى التخصصي", "إنشاء مركز البيانات",
-            "توسعة المطار", "تطوير الحدائق العامة"
-        ],
-        "تاريخ النشر": [current_date - timedelta(days=np.random.randint(5, 30)) for _ in range(8)],
-        "الموعد النهائي": [current_date + timedelta(days=np.random.randint(10, 45)) for _ in range(8)],
-        "القيمة التقديرية (ريال)": [
-            np.random.randint(200000, 10000000) for _ in range(8)
-        ],
-        "عدد العروض المستلمة": [np.random.randint(0, 10) for _ in range(8)],
-        "الحالة": np.random.choice(
-            ["مفتوحة", "مغلقة", "قيد التقييم", "تم الترسية", "ملغاة"],
-            size=8,
-            p=[0.4, 0.1, 0.2, 0.2, 0.1]
-        )
-    }
-    
-    # إنشاء DataFrame
-    tenders_df = pd.DataFrame(tenders_data)
-    
-    # عرض فلاتر البحث
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        status_filter = st.selectbox(
-            "حالة المناقصة",
-            ["الكل"] + sorted(tenders_df["الحالة"].unique().tolist())
-        )
-    
-    with col2:
-        project_filter = st.selectbox(
-            "المشروع",
-            ["الكل"] + sorted(tenders_df["المشروع"].unique().tolist())
-        )
-    
-    # تطبيق الفلاتر
-    filtered_tenders = tenders_df.copy()
-    
-    if status_filter != "الكل":
-        filtered_tenders = filtered_tenders[filtered_tenders["الحالة"] == status_filter]
-    
-    if project_filter != "الكل":
-        filtered_tenders = filtered_tenders[filtered_tenders["المشروع"] == project_filter]
-    
-    # عرض المناقصات المصفاة
-    st.dataframe(filtered_tenders, use_container_width=True)
-    
-    # تحليلات المناقصات
-    st.markdown("### تحليلات المناقصات الداخلية")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # توزيع المناقصات حسب الحالة
-        status_counts = tenders_df.groupby("الحالة").size().reset_index(name="العدد")
-        
-        fig1 = px.pie(
-            status_counts,
-            values="العدد",
-            names="الحالة",
-            title="توزيع المناقصات حسب الحالة",
-            color_discrete_sequence=px.colors.qualitative.Bold
-        )
-        
-        fig1.update_traces(textposition="inside", textinfo="percent+label")
-        
-        st.plotly_chart(fig1, use_container_width=True)
-    
-    with col2:
-        # متوسط عدد العروض حسب نوع المناقصة
-        tenders_df["نوع المناقصة"] = tenders_df["العنوان"].apply(
-            lambda x: "توريد" if "توريد" in x else "خدمات" if "خدمات" in x else "أخرى"
-        )
-        
-        avg_offers = tenders_df.groupby("نوع المناقصة")["عدد العروض المستلمة"].mean().reset_index()
-        avg_offers["عدد العروض المستلمة"] = avg_offers["عدد العروض المستلمة"].round(1)
-        
-        fig2 = px.bar(
-            avg_offers,
-            x="نوع المناقصة",
-            y="عدد العروض المستلمة",
-            title="متوسط عدد العروض حسب نوع المناقصة",
-            color="نوع المناقصة",
-            text="عدد العروض المستلمة"
-        )
-        
-        fig2.update_traces(texttemplate="%{text}", textposition="outside")
-        
-        st.plotly_chart(fig2, use_container_width=True)
-    
-    # المناقصات القريبة من الإغلاق
-    st.markdown("### المناقصات القريبة من الموعد النهائي")
-    
-    closing_soon = tenders_df[
-        (tenders_df["الموعد النهائي"] > current_date) & 
-        (tenders_df["الموعد النهائي"] <= current_date + timedelta(days=7)) &
-        (tenders_df["الحالة"] == "مفتوحة")
-    ].sort_values("الموعد النهائي")
-    
-    if not closing_soon.empty:
-        for _, tender in closing_soon.iterrows():
-            days_left = (tender["الموعد النهائي"] - current_date).days
+            st.session_state.project_data["location"] = st.text_input(
+                "الموقع",
+                value=st.session_state.project_data.get("location", "")
+            )
             
-            st.markdown(f"""
-            **{tender['رقم المناقصة']} - {tender['العنوان']}**  
-            **المشروع:** {tender['المشروع']}  
-            **الموعد النهائي:** {tender['الموعد النهائي'].strftime('%Y/%m/%d')} ({days_left} أيام متبقية)  
-            **القيمة التقديرية:** {tender['القيمة التقديرية (ريال)']:,} ريال  
-            **العروض المستلمة حتى الآن:** {tender['عدد العروض المستلمة']}
-            """)
-            st.markdown("---")
-    else:
-        st.info("لا توجد مناقصات على وشك الإغلاق خلال الأسبوع القادم")
-
-def show_vendor_evaluation():
-    """
-    عرض تقييم الموردين
-    """
-    st.markdown("## تقييم الموردين")
-    
-    # إنشاء بيانات توضيحية لتقييم الموردين
-    vendors_eval_data = {
-        "المورد": [
-            "شركة الصناعات السعودية", "مؤسسة الخليج للمقاولات", "شركة الرياض للإنشاءات",
-            "الشركة العربية للمعدات", "مصنع المنتجات الإسمنتية", "شركة تقنيات البناء",
-            "مؤسسة المدار للتوريدات", "شركة البنية التحتية المتكاملة", "مصنع الصلب السعودي",
-            "شركة الأنابيب الوطنية"
-        ],
-        "الفئة": [
-            "مواد بناء", "مقاولات", "خدمات هندسية", "معدات", "مواد خام", 
-            "تقنيات", "مواد متنوعة", "بنية تحتية", "صناعات معدنية", "أنابيب"
-        ],
-        "جودة المنتجات (5)": [4.5, 3.8, 4.2, 3.2, 4.7, 3.5, 3.9, 4.3, 4.6, 4.1],
-        "الالتزام بالمواعيد (5)": [4.2, 3.5, 4.0, 2.8, 4.5, 3.7, 3.6, 4.4, 4.3, 3.9],
-        "التنافسية السعرية (5)": [3.8, 4.2, 3.5, 4.6, 3.7, 4.1, 4.4, 3.8, 3.6, 4.0],
-        "الاستجابة والتواصل (5)": [4.3, 3.9, 4.5, 3.5, 4.2, 3.6, 3.8, 4.1, 4.4, 4.0],
-        "نسبة المحتوى المحلي (%)": [85, 92, 78, 65, 100, 70, 88, 75, 95, 82],
-        "عدد المشاريع المنفذة": [12, 8, 10, 5, 7, 6, 4, 9, 11, 8]
-    }
-    
-    # إنشاء DataFrame
-    vendors_eval_df = pd.DataFrame(vendors_eval_data)
-    
-    # حساب التقييم العام
-    eval_weights = {
-        "جودة المنتجات (5)": 0.35,
-        "الالتزام بالمواعيد (5)": 0.25,
-        "التنافسية السعرية (5)": 0.2,
-        "الاستجابة والتواصل (5)": 0.2
-    }
-    
-    # حساب التقييم المرجح
-    for col, weight in eval_weights.items():
-        vendors_eval_df[f"{col} (مرجح)"] = vendors_eval_df[col] * weight
-    
-    vendors_eval_df["التقييم العام"] = vendors_eval_df[[f"{col} (مرجح)" for col in eval_weights.keys()]].sum(axis=1)
-    
-    # تصنيف الموردين
-    conditions = [
-        (vendors_eval_df["التقييم العام"] >= 4.5),
-        (vendors_eval_df["التقييم العام"] >= 4.0),
-        (vendors_eval_df["التقييم العام"] >= 3.5),
-        (vendors_eval_df["التقييم العام"] >= 3.0),
-        (vendors_eval_df["التقييم العام"] < 3.0)
-    ]
-    values = ["ممتاز", "جيد جداً", "جيد", "مقبول", "ضعيف"]
-    vendors_eval_df["التصنيف"] = np.select(conditions, values)
-    
-    # عرض مقارنة الموردين
-    st.markdown("### مقارنة تقييمات الموردين")
-    
-    selected_vendors = st.multiselect(
-        "اختر الموردين للمقارنة",
-        vendors_eval_df["المورد"].tolist(),
-        default=vendors_eval_df["المورد"].tolist()[:5]
-    )
-    
-    if selected_vendors:
-        # تصفية البيانات
-        selected_df = vendors_eval_df[vendors_eval_df["المورد"].isin(selected_vendors)]
+            st.session_state.project_data["duration"] = st.number_input(
+                "المدة (بالأشهر)",
+                min_value=0,
+                value=int(st.session_state.project_data.get("duration", 0))
+            )
+            
+            start_date = st.date_input(
+                "تاريخ البدء المتوقع",
+                value=st.session_state.project_data.get("start_date", datetime.now().date())
+            )
+            st.session_state.project_data["start_date"] = start_date
+            
+            end_date = st.date_input(
+                "تاريخ الانتهاء المتوقع",
+                value=st.session_state.project_data.get("end_date", None)
+            )
+            st.session_state.project_data["end_date"] = end_date
         
-# تصفية البيانات
-if selected_vendors:
-    selected_df = vendors_eval_df[vendors_eval_df["المورد"].isin(selected_vendors)]
-    st.dataframe(selected_df)
-else:
-    st.write("يرجى اختيار مورد لعرض البيانات.")
+        # عرض المستندات المرفوعة
+        if uploaded_files:
+            st.subheader("المستندات المرفوعة")
+            file_list = ", ".join([file.name for file in uploaded_files])
+            st.info(f"تم رفع {len(uploaded_files)} ملفات: {file_list}")
+    
+    # تحليل المتطلبات - القسم الثاني
+    with tabs[1]:
+        st.header("تحليل المتطلبات")
+        
+        if st.session_state.extracted_data is not None:
+            # عرض المتطلبات المستخرجة
+            st.subheader("المتطلبات الرئيسية")
+            
+            # هنا سنفترض أن البيانات المستخرجة تحتوي على مفتاح 'requirements'
+            requirements_found = False
+            
+            for file_name, data in st.session_state.extracted_data.items():
+                if 'requirements' in data:
+                    requirements_found = True
+                    st.write(f"المتطلبات من الملف: {file_name}")
+                    
+                    for i, req in enumerate(data['requirements']):
+                        with st.expander(f"المتطلب {i+1}: {req.get('title', 'متطلب')}"):
+                            st.write(f"**الوصف:** {req.get('description', 'لا يوجد وصف')}")
+                            st.write(f"**الأهمية:** {req.get('importance', 'عادية')}")
+                            st.write(f"**الفئة:** {req.get('category', 'عامة')}")
+                            
+                            if 'compliance' in req:
+                                st.write(f"**الامتثال:** {req['compliance']}")
+            
+            if not requirements_found:
+                st.info("لم يتم استخراج متطلبات محددة من المستندات. يرجى رفع وثائق المناقصة أو العقد.")
+        else:
+            st.info("يرجى رفع المستندات وبدء التحليل لعرض المتطلبات.")
+    
+    # تحليل التكاليف والمخاطر - القسم الثالث
+    with tabs[2]:
+        st.header("تحليل التكاليف والمخاطر")
+        
+        if st.session_state.analysis_results is not None:
+            cost_tab, risk_tab = st.tabs(["تحليل التكاليف", "تحليل المخاطر"])
+            
+            with cost_tab:
+                st.subheader("هيكل التكاليف")
+                # هنا يمكن إضافة رسوم بيانية وتحليلات للتكاليف
+                
+                # مثال لرسم بياني افتراضي
+                if 'cost_breakdown' in st.session_state.analysis_results:
+                    cost_data = st.session_state.analysis_results['cost_breakdown']
+                    fig = px.pie(
+                        values=list(cost_data.values()),
+                        names=list(cost_data.keys()),
+                        title="توزيع التكاليف"
+                    )
+                    st.plotly_chart(fig)
+                else:
+                    st.write("لم يتم العثور على بيانات التكاليف")
+            
+            with risk_tab:
+                st.subheader("تقييم المخاطر")
+                # هنا يمكن إضافة تحليل المخاطر
+                
+                # مثال لعرض جدول المخاطر
+                if 'risks' in st.session_state.analysis_results:
+                    risks_df = pd.DataFrame(st.session_state.analysis_results['risks'])
+                    st.dataframe(risks_df)
+                else:
+                    st.write("لم يتم العثور على بيانات المخاطر")
+        else:
+            st.info("يرجى رفع المستندات وبدء التحليل لعرض تحليل التكاليف والمخاطر.")
+    
+    # المحتوى المحلي - القسم الرابع
+    with tabs[3]:
+        st.header("تحليل المحتوى المحلي")
+        
+        if st.session_state.analysis_results is not None and 'local_content' in st.session_state.analysis_results:
+            local_content = st.session_state.analysis_results['local_content']
+            
+            # عرض النسبة الإجمالية للمحتوى المحلي
+            if 'overall_percentage' in local_content:
+                st.metric(
+                    label="نسبة المحتوى المحلي الإجمالية",
+                    value=f"{local_content['overall_percentage']:.2f}%"
+                )
+            
+            # عرض تفاصيل المحتوى المحلي
+            if 'breakdown' in local_content:
+                st.subheader("تفاصيل المحتوى المحلي")
+                
+                breakdown = local_content['breakdown']
+                fig = px.bar(
+                    x=list(breakdown.keys()),
+                    y=list(breakdown.values()),
+                    title="تحليل المحتوى المحلي حسب الفئة"
+                )
+                fig.update_layout(
+                    xaxis_title="الفئة",
+                    yaxis_title="النسبة المئوية"
+                )
+                st.plotly_chart(fig)
+            
+            # توصيات لتحسين نسبة المحتوى المحلي
+            if 'recommendations' in local_content:
+                st.subheader("توصيات لتحسين المحتوى المحلي")
+                
+                for i, rec in enumerate(local_content['recommendations']):
+                    st.write(f"{i+1}. {rec}")
+        else:
+            st.info("يرجى رفع المستندات وبدء التحليل لعرض تحليل المحتوى المحلي.")
+    
+    # سلسلة الإمداد - القسم الخامس
+    with tabs[4]:
+        st.header("تحليل سلسلة الإمداد")
+        
+        if st.session_state.analysis_results is not None and 'supply_chain' in st.session_state.analysis_results:
+            supply_chain = st.session_state.analysis_results['supply_chain']
+            
+            # عرض الموردين المحتملين
+            if 'potential_suppliers' in supply_chain:
+                st.subheader("الموردين المحتملين")
+                suppliers_df = pd.DataFrame(supply_chain['potential_suppliers'])
+                st.dataframe(suppliers_df)
+            
+            # عرض المخاطر المتعلقة بسلسلة الإمداد
+            if 'risks' in supply_chain:
+                st.subheader("مخاطر سلسلة الإمداد")
+                
+                for i, risk in enumerate(supply_chain['risks']):
+                    with st.expander(f"المخاطرة {i+1}: {risk['title']}"):
+                        st.write(f"**الوصف:** {risk['description']}")
+                        st.write(f"**الاحتمالية:** {risk['probability']}")
+                        st.write(f"**التأثير:** {risk['impact']}")
+                        st.write(f"**استراتيجيات التخفيف:** {risk['mitigation']}")
+            
+            # عرض توصيات تحسين سلسلة الإمداد
+            if 'optimization' in supply_chain:
+                st.subheader("توصيات تحسين سلسلة الإمداد")
+                
+                for i, opt in enumerate(supply_chain['optimization']):
+                    st.write(f"{i+1}. {opt}")
+        else:
+            st.info("يرجى رفع المستندات وبدء التحليل لعرض تحليل سلسلة الإمداد.")
+    
+    # الجدول الزمني - القسم السادس
+    with tabs[5]:
+        st.header("تحليل الجدول الزمني")
+        
+        if st.session_state.analysis_results is not None and 'schedule' in st.session_state.analysis_results:
+            schedule = st.session_state.analysis_results['schedule']
+            
+            # عرض المراحل الرئيسية للمشروع
+            if 'phases' in schedule:
+                st.subheader("المراحل الرئيسية للمشروع")
+                
+                for i, phase in enumerate(schedule['phases']):
+                    with st.expander(f"المرحلة {i+1}: {phase['name']}"):
+                        st.write(f"**البداية:** {phase['start_date']}")
+                        st.write(f"**النهاية:** {phase['end_date']}")
+                        st.write(f"**المدة:** {phase['duration']} أيام")
+                        st.write(f"**الأنشطة:** {', '.join(phase['activities'])}")
+            
+            # عرض المسار الحرج
+            if 'critical_path' in schedule:
+                st.subheader("المسار الحرج")
+                
+                for i, activity in enumerate(schedule['critical_path']):
+                    st.write(f"{i+1}. {activity}")
+            
+            # عرض توصيات لتحسين الجدول الزمني
+            if 'optimization' in schedule:
+                st.subheader("توصيات تحسين الجدول الزمني")
+                
+                for i, opt in enumerate(schedule['optimization']):
+                    st.write(f"{i+1}. {opt}")
+        else:
+            st.info("يرجى رفع المستندات وبدء التحليل لعرض تحليل الجدول الزمني.")
+    
+    # التوصيات والملخص - القسم السابع
+    with tabs[6]:
+        st.header("التوصيات والملخص")
+        
+        if st.session_state.analysis_results is not None and 'recommendations' in st.session_state.analysis_results:
+            recommendations = st.session_state.analysis_results['recommendations']
+            
+            # عرض التوصيات الرئيسية
+            st.subheader("التوصيات الرئيسية")
+            
+            for i, rec in enumerate(recommendations):
+                with st.expander(f"التوصية {i+1}: {rec['title']}"):
+                    st.write(f"**الوصف:** {rec['description']}")
+                    st.write(f"**الأولوية:** {rec['priority']}")
+                    st.write(f"**الفوائد:** {rec['benefits']}")
+                    
+                    if 'implementation' in rec:
+                        st.write(f"**خطوات التنفيذ:**")
+                        for j, step in enumerate(rec['implementation']):
+                            st.write(f"  {j+1}. {step}")
+            
+            # عرض الملخص التنفيذي
+            if 'executive_summary' in st.session_state.analysis_results:
+                st.subheader("الملخص التنفيذي")
+                st.write(st.session_state.analysis_results['executive_summary'])
+        else:
+            st.info("يرجى رفع المستندات وبدء التحليل لعرض التوصيات والملخص.")
+    
+    # معالجة زر التحليل
+    if analysis_btn and uploaded_files:
+        with st.spinner("جارٍ تحليل المستندات..."):
+            # معالجة المستندات المرفوعة
+            extracted_data, file_contents = process_uploaded_documents(uploaded_files)
+            st.session_state.extracted_data = extracted_data
+            
+            # تحليل المتطلبات
+            requirement_results = analyze_requirements(extracted_data)
+            
+            # تحليل المحتوى المحلي
+            local_content_results = analyze_local_content(
+                extracted_data, 
+                st.session_state.project_data
+            )
+            
+            # إنشاء نتائج التحليل الشاملة
+            st.session_state.analysis_results = {
+                "requirements": requirement_results,
+                "local_content": local_content_results,
+                # هنا ستضاف نتائج التحليلات الأخرى
+            }
+            
+            st.success("تم الانتهاء من التحليل!")
+    elif analysis_btn and not uploaded_files:
+        st.error("يرجى رفع المستندات المطلوبة أولاً.")
+
+if __name__ == "__main__":
+    main()
