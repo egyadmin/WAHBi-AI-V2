@@ -19,7 +19,7 @@ python-docx>=0.8.11
 PyPDF2>=3.0.0
 openpyxl>=3.1.0
 pymupdf>=1.22.0  # تم إضافة PyMuPDF لدعم fitz
-git+https://github.com/deanmalmgren/textract.git  # تثبيت textract مباشرة من GitHub
+textract==1.6.3  # استخدام إصدار مستقر من textract
 # OCR (basic)
 pytesseract>=0.3.10
 pillow>=10.0.0
