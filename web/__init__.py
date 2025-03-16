@@ -1,2 +1,1 @@
-touch web/__init__.py
-touch web/pages/__init__.py
+# تهيئة مجلد web كموديول في Python
