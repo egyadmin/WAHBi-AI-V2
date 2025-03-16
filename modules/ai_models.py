@@ -6,8 +6,9 @@ import numpy as np
 from typing import Dict, List, Any, Union, Tuple, Optional
 from datetime import datetime
 from dotenv import load_dotenv
+import os
 
-# تحميل متغيرات البيئة
+# تحميل المتغيرات البيئية
 load_dotenv()
 
 # استخدام المتغيرات البيئية
