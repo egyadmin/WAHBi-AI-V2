@@ -194,3 +194,4 @@ class RequirementAnalyzer:
             })
 
         return recommendations
+        
