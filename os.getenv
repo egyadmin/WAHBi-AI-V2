@@ -1,0 +1,11 @@
+import os
+
+# استخدام متغير بيئي مع قيمة افتراضية
+debug_mode = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
+
+# استخدام متغير بيئي بدون قيمة افتراضية
+api_key = os.getenv("ANTHROPIC_API_KEY")
+
+# التحقق من وجود المتغير البيئي
+if api_key is None:
+    print("تحذير: لم يتم تعيين ANTHROPIC_API_KEY")
