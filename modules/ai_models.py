@@ -6,6 +6,12 @@ import numpy as np
 from typing import Dict, List, Any, Union, Tuple, Optional
 from datetime import datetime
 
+# تحميل متغيرات البيئة
+load_dotenv()
+
+# استخدام المتغيرات البيئية
+api_key = os.getenv("ANTHROPIC_API_KEY")
+
 class LLMProcessor:
     """
     فئة للتعامل مع نماذج اللغة الكبيرة (LLM) لتحليل المناقصات
