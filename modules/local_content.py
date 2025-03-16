@@ -531,7 +531,128 @@
         """
         requirements = []
         
-        # الحد الأدنى للمimport os
+        # الحد الأدنى للمحتوى المحلي
+        min_percentage = sector_data["min_percentage"]
+        target_percentage = sector_data["target_percentage"]
+        
+        # إضافة متطلب الحد الأدنى للمحتوى المحلي
+        requirements.append({
+            "title": "الحد الأدنى للمحتوى المحلي",
+            "description": f"يجب أن تكون نسبة المحتوى المحلي للمشروع لا تقل عن {min_percentage}%",
+            "importance": "عالية",
+            "category": "محتوى محلي"
+        })
+        
+        # إضافة متطلب النسبة المستهدفة للمحتوى المحلي
+        requirements.append({
+            "title": "النسبة المستهدفة للمحتوى المحلي",
+            "description": f"النسبة المستهدفة للمحتوى المحلي هي {target_percentage}% وسيتم منح نقاط إضافية للعروض التي تتجاوز الحد الأدنى",
+            "importance": "متوسطة",
+            "category": "محتوى محلي"
+        })
+        
+        # إضافة متطلب توطين الوظائف
+        requirements.append({
+            "title": "توطين الوظائف",
+            "description": "يجب أن تكون الشركة ملتزمة بمتطلبات نطاقات وأن تكون في النطاق الأخضر على الأقل",
+            "importance": "عالية",
+            "category": "محتوى محلي"
+        })
+        
+        # إضافة متطلب شهادة المحتوى المحلي
+        requirements.append({
+            "title": "شهادة المحتوى المحلي",
+            "description": "يجب تقديم شهادة المحتوى المحلي الصادرة من هيئة المحتوى المحلي والمشتريات الحكومية",
+            "importance": "عالية",
+            "category": "محتوى محلي"
+        })
+        
+        # إضافة متطلب خطة تطوير المحتوى المحلي
+        requirements.append({
+            "title": "خطة تطوير المحتوى المحلي",
+            "description": "يجب تقديم خطة لتطوير المحتوى المحلي تتضمن تفاصيل الموردين المحليين وتوطين التقنية والخبرات",
+            "importance": "متوسطة",
+            "category": "محتوى محلي"
+        })
+        
+        # إضافة متطلبات إضافية من البيانات المستخرجة
+        if local_content_info["requirements"]:
+            for i, req in enumerate(local_content_info["requirements"]):
+                requirements.append({
+                    "title": f"متطلب محتوى محلي {i+1}",
+                    "description": req,
+                    "importance": "عالية",
+                    "category": "محتوى محلي",
+                    "source": "مستخرج"
+                })
+        
+        return requirements
+    
+    def _generate_recommendations(self, overall_percentage: float, sector_data: Dict[str, Any],
+                             manpower_analysis: Dict[str, Any], materials_analysis: Dict[str, Any],
+                             services_analysis: Dict[str, Any], nitaqat_analysis: Dict[str, Any]) -> List[str]:
+        """
+        إعداد توصيات لتحسين المحتوى المحلي
+        """
+        recommendations = []
+        
+        # الحد الأدنى والنسبة المستهدفة
+        min_percentage = sector_data["min_percentage"]
+        target_percentage = sector_data["target_percentage"]
+        
+        # التحقق من الامتثال للحد الأدنى
+        if overall_percentage < min_percentage:
+            recommendations.append(
+                f"زيادة نسبة المحتوى المحلي من {overall_percentage}% إلى {min_percentage}% على الأقل للامتثال للحد الأدنى المطلوب"
+            )
+        elif overall_percentage < target_percentage:
+            recommendations.append(
+                f"زيادة نسبة المحتوى المحلي من {overall_percentage}% إلى {target_percentage}% للوصول إلى النسبة المستهدفة"
+            )
+        
+        # توصيات لتحسين القوى العاملة
+        if manpower_analysis["percentage"] < 60:
+            recommendations.append(
+                f"زيادة نسبة القوى العاملة السعودية من {manpower_analysis['percentage']}% إلى 60% على الأقل"
+            )
+        
+        # توصيات لتحسين المواد
+        if materials_analysis["percentage"] < 50:
+            recommendations.append(
+                "زيادة استخدام المواد المصنعة محلياً أو المجمعة محلياً بدلاً من المواد المستوردة"
+            )
+        
+        if materials_analysis["fully_imported"] > materials_analysis["local_manufacturing"]:
+            recommendations.append(
+                "تقليل الاعتماد على المواد المستوردة بالكامل وزيادة استخدام المواد المصنعة محلياً"
+            )
+        
+        # توصيات لتحسين الخدمات
+        if services_analysis["percentage"] < 70:
+            recommendations.append(
+                "زيادة الاعتماد على مزودي الخدمات المحليين بدلاً من المزودين الأجانب"
+            )
+        
+        if services_analysis["foreign_provider"] > services_analysis["local_service_provider"]:
+            recommendations.append(
+                "تقليل الاعتماد على مزودي الخدمات الأجانب وزيادة الاعتماد على مزودي الخدمات المحليين"
+            )
+        
+        # توصيات للامتثال لنطاقات
+        if not nitaqat_analysis["compliant"]:
+            recommendations.append(
+                f"زيادة نسبة التوطين في القوى العاملة من {nitaqat_analysis['estimated_saudi_percentage']}% إلى {nitaqat_analysis['required_saudi_percentage']}% على الأقل للامتثال لمتطلبات نطاقات"
+            )
+        
+        # توصيات عامة
+        recommendations.extend([
+            "تطوير برامج تدريب وتأهيل للكوادر السعودية لزيادة نسبة التوطين",
+            "الاستفادة من برامج دعم المحتوى المحلي المقدمة من هيئة المحتوى المحلي والمشتريات الحكومية",
+            "بناء شراكات مع المصنعين المحليين لتوطين سلسلة الإمداد",
+            "الاستفادة من حوافز القروض والتمويل المقدمة للشركات التي تساهم في زيادة المحتوى المحلي"
+        ])
+        
+        return recommendationsimport os
 import json
 import numpy as np
 import pandas as pd
