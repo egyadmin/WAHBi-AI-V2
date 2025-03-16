@@ -5,6 +5,7 @@ import requests
 import numpy as np
 from typing import Dict, List, Any, Union, Tuple, Optional
 from datetime import datetime
+from dotenv import load_dotenv
 
 # تحميل متغيرات البيئة
 load_dotenv()
