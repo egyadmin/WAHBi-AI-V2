@@ -334,7 +334,7 @@ class RequirementAnalyzer:
         
         return gaps
     
-    def _analyze_risks(self, requirements: List[Dict[str, Any]], extracted_data: Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _analyze_risks(self, requirements: List[Dict[str, Any]], extracted_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         تحليل المخاطر المتعلقة بالمتطلبات
         """
