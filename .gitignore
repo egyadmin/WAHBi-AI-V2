@@ -1,0 +1,15 @@
+# تجاهل ملفات البيئة التي تحتوي على بيانات حساسة
+.env
+.env.local
+.env.*.local
+*.env
+
+# تجاهل المجلدات الخاصة بالبيئة الافتراضية
+venv/
+env/
+.venv/
+.python-version
+
+# تجاهل ملفات النظام
+.DS_Store
+Thumbs.db
