@@ -26,7 +26,7 @@ sys.path.append(str(current_dir))
 # استيراد المكونات الضرورية
 from web.pages.home import show_home_page
 from web.pages.tender_analysis import show_tender_analysis
-from web.pages.requirements import show_requirements_analysis
+from web.pages.requirements_analysis import show_requirements_analysis
 from web.pages.cost_estimation import show_cost_estimation
 from web.pages.risk_analysis import show_risk_analysis
 from web.pages.timeline import show_timeline
