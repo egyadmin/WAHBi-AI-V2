@@ -12,7 +12,6 @@ import docx
 import PyPDF2
 import fitz  # PyMuPDF
 import pdfplumber
-import mammoth
 from openpyxl import load_workbook
 from PIL import Image
 import pytesseract
@@ -125,10 +124,6 @@ class DocumentProcessor:
         try:
             doc = docx.Document(file_path)
             extracted_data["text"] = "\n".join([para.text for para in doc.paragraphs if para.text.strip()])
-            if not extracted_data["text"].strip():
-                with open(file_path, "rb") as docx_file:
-                    result = mammoth.extract_raw_text(docx_file)
-                    extracted_data["text"] = result.value
         except Exception as e:
             extracted_data["error"] = f"خطأ في معالجة ملف DOCX: {str(e)}"
         return extracted_data
