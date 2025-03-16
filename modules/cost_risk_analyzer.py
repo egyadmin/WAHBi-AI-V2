@@ -1,4 +1,299 @@
-"deviation_percentage": deviation_percentage,
+local_content_percentage = (local_content / total_cost * 100) if total_cost > 0 else 0
+        
+        # حساب المحتوى المحلي حسب الفئة
+        categories = {}
+        for item in items:
+            category = item.get("category", "أخرى")
+            cost = item.get("cost", 0)
+            local_contribution = item.get("local_content_contribution", 0)
+            local_amount = cost * local_contribution / 100
+            
+            if category in categories:
+                categories[category]["total"] += cost
+                categories[category]["local"] += local_amount
+            else:
+                categories[category] = {
+                    "total": cost,
+                    "local": local_amount
+                }
+        
+        local_content_by_category = {}
+        for category, data in categories.items():
+            local_content_by_category[category] = (data["local"] / data["total"] * 100) if data["total"] > 0 else 0
+        
+        # الهدف المرجعي للمحتوى المحلي
+        target_local_content = self.reference_data.get("target_local_content", 40)
+        local_content_gap = target_local_content - local_content_percentage
+        
+        # إمكانية التحسين
+        import_items = [item for item in items if item.get("source_type") == "import"]
+        improvement_potential = sum(item.get("cost", 0) for item in import_items) / total_cost * 100 if total_cost > 0 else 0
+        
+        return {
+            "local_content_percentage": local_content_percentage,
+            "local_content_by_category": local_content_by_category,
+            "target_local_content": target_local_content,
+            "local_content_gap": local_content_gap,
+            "improvement_potential": improvement_potential
+        }
+    
+    def _identify_procurement_improvements(self, procurement_costs: Dict[str, Any],
+                                         suppliers_analysis: Dict[str, Any],
+                                         local_content_analysis: Dict[str, Any]) -> List[str]:
+        """
+        تحديد فرص تحسين المشتريات
+        
+        المعاملات:
+        ----------
+        procurement_costs : Dict[str, Any]
+            تحليل تكاليف المشتريات
+        suppliers_analysis : Dict[str, Any]
+            تحليل الموردين
+        local_content_analysis : Dict[str, Any]
+            تحليل المحتوى المحلي
+            
+        المخرجات:
+        --------
+        List[str]
+            فرص تحسين المشتريات
+        """
+        improvements = []
+        
+        # تحسين تكاليف المشتريات
+        if procurement_costs["cost_efficiency"] < 0:
+            improvements.append("تحسين كفاءة تكاليف المشتريات من خلال إعادة التفاوض مع الموردين وتوحيد الطلبات.")
+        
+        # تحسين تنوع الموردين
+        if suppliers_analysis["supplier_diversity"] < 30:
+            improvements.append("زيادة تنوع الموردين لتقليل مخاطر سلسلة الإمداد وتحسين المرونة.")
+        
+        # تحسين نسبة الموردين المحليين
+        if suppliers_analysis["local_percentage"] < 50:
+            improvements.append("زيادة نسبة الموردين المحليين لتعزيز المحتوى المحلي وتقليل تكاليف النقل.")
+        
+        # تحسين المحتوى المحلي
+        if local_content_analysis["local_content_gap"] > 0:
+            improvements.append(f"سد فجوة المحتوى المحلي البالغة {local_content_analysis['local_content_gap']:.1f}% للوصول إلى الهدف.")
+        
+        # تحسين تركيز الموردين
+        high_concentration = [supplier for supplier, percentage in suppliers_analysis["supplier_concentration"].items() if percentage > 30]
+        if high_concentration:
+            improvements.append(f"تقليل الاعتماد على الموردين الرئيسيين ({', '.join(high_concentration)}) لتقليل المخاطر.")
+        
+        # إضافة توصيات عامة
+        improvements.extend([
+            "تطبيق نظام تقييم الموردين وتحفيز الأداء المتميز.",
+            "تحسين عملية التخطيط للمشتريات لتقليل الطلبات العاجلة والتكاليف الإضافية.",
+            "تطوير قاعدة بيانات للموردين وتعزيز الشفافية في عملية اختيار الموردين.",
+            "الاستفادة من التكنولوجيا لأتمتة عمليات المشتريات وتحسين الكفاءة."
+        ])
+        
+        return improvements
+    
+    def _generate_procurement_summary(self, procurement_costs: Dict[str, Any],
+                                    suppliers_analysis: Dict[str, Any],
+                                    local_content_analysis: Dict[str, Any]) -> str:
+        """
+        إعداد ملخص لتقرير المشتريات
+        
+        المعاملات:
+        ----------
+        procurement_costs : Dict[str, Any]
+            تحليل تكاليف المشتريات
+        suppliers_analysis : Dict[str, Any]
+            تحليل الموردين
+        local_content_analysis : Dict[str, Any]
+            تحليل المحتوى المحلي
+            
+        المخرجات:
+        --------
+        str
+            ملخص تقرير المشتريات
+        """
+        summary = "ملخص تقرير المشتريات:\n\n"
+        
+        # ملخص التكاليف
+        summary += "1. تكاليف المشتريات:\n"
+        summary += f"   - إجمالي تكاليف المشتريات: {procurement_costs['total_procurement_cost']:,.0f} ريال\n"
+        summary += f"   - نسبة المشتريات المحلية: {procurement_costs['local_percentage']:.1f}%\n"
+        if procurement_costs['cost_efficiency'] > 0:
+            summary += f"   - كفاءة التكلفة: {procurement_costs['cost_efficiency']:.1f}% (وفر عن المتوسط)\n"
+        else:
+            summary += f"   - كفاءة التكلفة: {-procurement_costs['cost_efficiency']:.1f}% (تجاوز عن المتوسط)\n"
+        
+        # ملخص الموردين
+        summary += "\n2. تحليل الموردين:\n"
+        summary += f"   - عدد الموردين: {suppliers_analysis['total_suppliers']}\n"
+        summary += f"   - نسبة الموردين المحليين: {suppliers_analysis['local_percentage']:.1f}%\n"
+        summary += f"   - تنوع الموردين: {suppliers_analysis['supplier_diversity']:.1f}%\n"
+        
+        # ملخص المحتوى المحلي
+        summary += "\n3. تحليل المحتوى المحلي:\n"
+        summary += f"   - نسبة المحتوى المحلي الحالية: {local_content_analysis['local_content_percentage']:.1f}%\n"
+        summary += f"   - نسبة المحتوى المحلي المستهدفة: {local_content_analysis['target_local_content']:.1f}%\n"
+        summary += f"   - فجوة المحتوى المحلي: {local_content_analysis['local_content_gap']:.1f}%\n"
+        summary += f"   - إمكانية تحسين المحتوى المحلي: {local_content_analysis['improvement_potential']:.1f}%\n"
+        
+        return summary
+    
+    def _generate_default_mitigation(self, risk: Dict[str, Any]) -> str:
+        """
+        إنشاء استراتيجية تخفيف افتراضية للمخاطرة
+        
+        المعاملات:
+        ----------
+        risk : Dict[str, Any]
+            المخاطرة
+            
+        المخرجات:
+        --------
+        str
+            استراتيجية التخفيف
+        """
+        # استخراج نوع المخاطرة
+        risk_name = risk.get("name", "").lower()
+        risk_type = risk.get("type", "").lower()
+        
+        if "أسعار" in risk_name or "تكلفة" in risk_name:
+            return "تأمين عقود توريد بأسعار ثابتة وإعداد ميزانية احتياطية للتغييرات المحتملة في الأسعار."
+        elif "دفعات" in risk_name or "تمويل" in risk_name or "سيولة" in risk_name:
+            return "وضع شروط دفع واضحة في العقد وتأمين تسهيلات ائتمانية احتياطية وإعداد خطة للتدفق النقدي."
+        elif "عملات" in risk_name or "صرف" in risk_name:
+            return "استخدام آليات التحوط والتعاقد بالعملة المحلية حيثما أمكن."
+        elif risk_type == "financial":
+            return "إعداد خطة مالية بديلة وتخصيص احتياطي طوارئ مالي بنسبة مناسبة من قيمة المشروع."
+        else:
+            return "تحديد وتقييم المخاطر بشكل دوري ووضع خطط بديلة للتعامل معها."
+    
+    def _generate_overrun_mitigation(self, category: str, deviation_percentage: float) -> str:
+        """
+        إنشاء استراتيجية تخفيف لتجاوز التكاليف
+        
+        المعاملات:
+        ----------
+        category : str
+            فئة التكلفة
+        deviation_percentage : float
+            نسبة التجاوز
+            
+        المخرجات:
+        --------
+        str
+            استراتيجية التخفيف
+        """
+        category = category.lower()
+        
+        if "مواد" in category:
+            return "البحث عن موردين بديلين وإعادة التفاوض على الأسعار وتحسين إدارة المخزون."
+        elif "عمالة" in category:
+            return "تحسين إنتاجية العمالة وإعادة توزيع المهام وتقييم إمكانية الاستعانة بمقاولي الباطن."
+        elif "معدات" in category:
+            return "تحسين استغلال المعدات ومراجعة خيارات الشراء مقابل الإيجار وتقليل أوقات التوقف."
+        elif "مقاولين" in category or "باطن" in category:
+            return "مراجعة عقود مقاولي الباطن وإعادة التفاوض على الأسعار وتحسين إدارة العقود."
+        elif "إدارة" in category or "غير مباشرة" in category:
+            return "ترشيد المصاريف الإدارية وتقليل التكاليف غير المباشرة ومراجعة الهيكل التنظيمي."
+        else:
+            return "مراجعة بنود التكلفة وتحديد فرص التوفير وتطبيق إجراءات ضبط التكاليف."
+    
+    def _generate_deviation_recommendation(self, category: str, expected_deviation: float) -> str:
+        """
+        إنشاء توصية للتعامل مع الانحراف المتوقع
+        
+        المعاملات:
+        ----------
+        category : str
+            فئة التكلفة
+        expected_deviation : float
+            الانحراف المتوقع
+            
+        المخرجات:
+        --------
+        str
+            التوصية
+        """
+        category = category.lower()
+        
+        if expected_deviation > 0:
+            # توصيات لتجاوز التكاليف
+            if "مواد" in category:
+                return "مراجعة بدائل المواد وتوحيد المشتريات للاستفادة من وفورات الحجم وتأمين العقود مسبقًا."
+            elif "عمالة" in category:
+                return "تحسين جدولة العمالة وزيادة الإنتاجية وتقييم إمكانية الاستعانة بمقاولي الباطن."
+            elif "معدات" in category:
+                return "تحسين إدارة المعدات وزيادة كفاءة الاستخدام ومراجعة خيارات الإيجار بدلاً من الشراء."
+            else:
+                return "تنفيذ إجراءات ضبط التكاليف ومراقبة الإنفاق بشكل دوري ومراجعة الميزانية."
+        else:
+            # توصيات للوفر في التكاليف
+            if abs(expected_deviation) > 10:
+                return "مراجعة تقديرات التكلفة لضمان عدم المبالغة وإعادة توزيع الموارد للأنشطة الحرجة."
+            else:
+                return "الاستفادة من الوفر المتوقع في تعزيز جودة المشروع أو تغطية تجاوزات محتملة في بنود أخرى."
+    
+    def _load_reference_data(self) -> Dict[str, Any]:
+        """
+        تحميل البيانات المرجعية
+        
+        المخرجات:
+        --------
+        Dict[str, Any]
+            البيانات المرجعية
+        """
+        try:
+            file_path = 'data/templates/cost_reference_data.json'
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            else:
+                logger.warning(f"ملف البيانات المرجعية غير موجود: {file_path}")
+                # إنشاء بيانات مرجعية افتراضية
+                return self._create_default_reference_data()
+        except Exception as e:
+            logger.error(f"فشل في تحميل البيانات المرجعية: {str(e)}")
+            return self._create_default_reference_data()
+    
+    def _create_default_reference_data(self) -> Dict[str, Any]:
+        """
+        إنشاء بيانات مرجعية افتراضية
+        
+        المخرجات:
+        --------
+        Dict[str, Any]
+            البيانات المرجعية الافتراضية
+        """
+        return {
+            "avg_direct_percentage": 75.0,
+            "avg_indirect_percentage": 25.0,
+            "avg_profit_margin": 15.0,
+            "avg_cost_revenue_ratio": 85.0,
+            "avg_roi": 20.0,
+            "avg_procurement_cost": 1000000,
+            "target_local_content": 40.0,
+            "sector_benchmarks": {
+                "construction": {
+                    "profit_margin": 12.0,
+                    "cost_revenue_ratio": 88.0,
+                    "direct_percentage": 80.0
+                },
+                "infrastructure": {
+                    "profit_margin": 10.0,
+                    "cost_revenue_ratio": 90.0,
+                    "direct_percentage": 85.0
+                },
+                "services": {
+                    "profit_margin": 20.0,
+                    "cost_revenue_ratio": 80.0,
+                    "direct_percentage": 65.0
+                }
+            },
+            "cost_overrun_statistics": {
+                "avg_overrun_percentage": 15.0,
+                "materials_overrun": 12.0,
+                "labor_overrun": 18.0,
+                "equipment_overrun": 10.0
+            }
+        }                        "deviation_percentage": deviation_percentage,
                         "risk_level": risk_level,
                         "impact": "تأثير على هامش الربح وزيادة التكاليف الإجمالية",
                         "mitigation": self._generate_overrun_mitigation(category, deviation_percentage)
