@@ -407,7 +407,7 @@ def _analyze_risks(self, requirements: List[Dict[str, Any]], extracted_data: Dic
         
         return risks
     
-    def _generate_recommendations(self, requirements: List[Dict[str, Any]], compliance_results: Dict[str, Any], 
+def _generate_recommendations(self, requirements: List[Dict[str, Any]], compliance_results: Dict[str, Any], 
                               gaps: List[Dict[str, Any]], risks: List[Dict[str, Any]], 
                               extracted_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
