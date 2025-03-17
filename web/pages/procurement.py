@@ -9,6 +9,14 @@ from datetime import datetime
 import os
 import sys
 
+# ✅ تأكد أن `set_page_config` هو أول أمر بعد الاستيراد
+st.set_page_config(
+    page_title="تحليل المناقصات والعقود",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # إضافة المسار الرئيسي للمشروع إلى PATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -22,6 +30,7 @@ from modules.supply_chain import SupplyChainAnalyzer
 from modules.ai_models import LLMProcessor, ArabicBERTModel
 from utils.database import VectorDBConnector, TemplateLoader
 from utils.api_integrations import MunafasatAPI, EtimadAPI, BaladyAPI
+
 
 # تكوين الصفحة
 st.set_page_config(
