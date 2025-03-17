@@ -1,4 +1,177 @@
-}
+import os
+import json
+import re
+import numpy as np
+import pandas as pd
+from typing import Dict, List, Any, Union, Tuple, Optional
+from datetime import datetime
+
+class LocalContentCalculator:
+    """
+    فئة لحساب وتحليل المحتوى المحلي في المناقصات
+    """
+    
+    def __init__(self):
+        """
+        تهيئة حاسبة المحتوى المحلي
+        """
+        # تحميل بيانات المحتوى المحلي
+        self.local_content_data = self._load_local_content_data()
+        
+        # تحميل قاعدة بيانات الشركات المحلية
+        self.local_companies = self._load_local_companies()
+        
+        # تحميل نطاقات الشركات
+        self.nitaqat_data = self._load_nitaqat_data()
+        
+        # قائمة القطاعات
+        self.sectors = [
+            "الإنشاءات", "تقنية المعلومات", "الاتصالات", "الصحة",
+            "التعليم", "النقل", "الطاقة", "المياه", "البيئة",
+            "الصناعة", "التجارة", "السياحة", "الخدمات المالية"
+        ]
+    
+    def _load_local_content_data(self) -> Dict[str, Any]:
+        """
+        تحميل بيانات المحتوى المحلي
+        """
+        # في التطبيق الفعلي، قد تُحمل هذه البيانات من ملف أو قاعدة بيانات
+        return {
+            "sectors": {
+                "الإنشاءات": {
+                    "min_percentage": 30,
+                    "target_percentage": 60,
+                    "weights": {
+                        "manpower": 0.35,
+                        "materials": 0.45,
+                        "services": 0.2
+                    }
+                },
+                "تقنية المعلومات": {
+                    "min_percentage": 25,
+                    "target_percentage": 50,
+                    "weights": {
+                        "manpower": 0.55,
+                        "materials": 0.15,
+                        "services": 0.3
+                    }
+                },
+                "عام": {
+                    "min_percentage": 20,
+                    "target_percentage": 40,
+                    "weights": {
+                        "manpower": 0.4,
+                        "materials": 0.3,
+                        "services": 0.3
+                    }
+                }
+            },
+            "material_categories": {
+                "local_manufacturing": 1.0,
+                "local_assembly": 0.7,
+                "imported_with_local_value_add": 0.4,
+                "fully_imported": 0.0
+            },
+            "manpower_categories": {
+                "saudi_employee": 1.0,
+                "expat_employee": 0.0
+            },
+            "service_categories": {
+                "local_service_provider": 1.0,
+                "joint_venture": 0.6,
+                "foreign_provider_with_local_partner": 0.3,
+                "foreign_provider": 0.0
+            }
+        }
+    
+    def _load_local_companies(self) -> Dict[str, Dict[str, Any]]:
+        """
+        تحميل قاعدة بيانات الشركات المحلية
+        """
+        # في التطبيق الفعلي، قد تُحمل هذه البيانات من ملف أو قاعدة بيانات
+        return {
+            "company1": {
+                "name": "شركة البناء السعودية",
+                "cr_number": "1010XXXXXX",
+                "sector": "الإنشاءات",
+                "local_content_certificate": True,
+                "saudi_employees_percentage": 35,
+                "nitaqat_category": "أخضر متوسط",
+                "local_content_percentage": 45
+            },
+            "company2": {
+                "name": "شركة تقنية المستقبل",
+                "cr_number": "1020XXXXXX",
+                "sector": "تقنية المعلومات",
+                "local_content_certificate": True,
+                "saudi_employees_percentage": 42,
+                "nitaqat_category": "أخضر مرتفع",
+                "local_content_percentage": 52
+            },
+            "company3": {
+                "name": "مصنع المنتجات المعدنية",
+                "cr_number": "1030XXXXXX",
+                "sector": "الصناعة",
+                "local_content_certificate": True,
+                "saudi_employees_percentage": 28,
+                "nitaqat_category": "أخضر منخفض",
+                "local_content_percentage": 61
+            }
+        }
+    
+    def _load_nitaqat_data(self) -> Dict[str, Dict[str, Any]]:
+        """
+        تحميل بيانات نطاقات الشركات
+        """
+        # في التطبيق الفعلي، قد تُحمل هذه البيانات من ملف أو قاعدة بيانات
+        return {
+            "الإنشاءات": {
+                "صغيرة": {
+                    "أحمر": {"min": 0, "max": 5},
+                    "أخضر منخفض": {"min": 6, "max": 10},
+                    "أخضر متوسط": {"min": 11, "max": 15},
+                    "أخضر مرتفع": {"min": 16, "max": 25},
+                    "بلاتيني": {"min": 26, "max": 100}
+                },
+                "متوسطة": {
+                    "أحمر": {"min": 0, "max": 7},
+                    "أخضر منخفض": {"min": 8, "max": 14},
+                    "أخضر متوسط": {"min": 15, "max": 20},
+                    "أخضر مرتفع": {"min": 21, "max": 30},
+                    "بلاتيني": {"min": 31, "max": 100}
+                },
+                "كبيرة": {
+                    "أحمر": {"min": 0, "max": 9},
+                    "أخضر منخفض": {"min": 10, "max": 16},
+                    "أخضر متوسط": {"min": 17, "max": 23},
+                    "أخضر مرتفع": {"min": 24, "max": 35},
+                    "بلاتيني": {"min": 36, "max": 100}
+                }
+            },
+            "تقنية المعلومات": {
+                "صغيرة": {
+                    "أحمر": {"min": 0, "max": 6},
+                    "أخضر منخفض": {"min": 7, "max": 12},
+                    "أخضر متوسط": {"min": 13, "max": 19},
+                    "أخضر مرتفع": {"min": 20, "max": 29},
+                    "بلاتيني": {"min": 30, "max": 100}
+                },
+                "متوسطة": {
+                    "أحمر": {"min": 0, "max": 13},
+                    "أخضر منخفض": {"min": 14, "max": 20},
+                    "أخضر متوسط": {"min": 21, "max": 27},
+                    "أخضر مرتفع": {"min": 28, "max": 35},
+                    "بلاتيني": {"min": 36, "max": 100}
+                },
+                "كبيرة": {
+                    "أحمر": {"min": 0, "max": 17},
+                    "أخضر منخفض": {"min": 18, "max": 25},
+                    "أخضر متوسط": {"min": 26, "max": 33},
+                    "أخضر مرتفع": {"min": 34, "max": 40},
+                    "بلاتيني": {"min": 41, "max": 100}
+                }
+            }
+        }
     
     def calculate(self, extracted_data: Dict[str, Any], **kwargs) -> Dict[str, Any]:
         """
@@ -409,419 +582,3 @@
             )
         
         # حساب النسبة المئوية للمحتوى المحلي في الخدمات
-        total_services = services_analysis["total_services"]
-        
-        if total_services > 0:
-            service_categories = self.local_content_data["service_categories"]
-            services_percentage = (
-                service_categories["local_service_provider"] * services_analysis["local_service_provider"] +
-                service_categories["joint_venture"] * services_analysis["joint_venture"] +
-                service_categories["foreign_provider_with_local_partner"] * services_analysis["foreign_provider_with_local_partner"] +
-                service_categories["foreign_provider"] * services_analysis["foreign_provider"]
-            ) / total_services * 100
-            
-            services_analysis["percentage"] = round(services_percentage, 2)
-        
-        return services_analysis
-    
-    def _analyze_nitaqat_compliance(self, extracted_data: Dict[str, Any], sector: str) -> Dict[str, Any]:
-        """
-        تحليل الامتثال لمتطلبات نطاقات
-        """
-        nitaqat_analysis = {
-            "compliant": False,
-            "nitaqat_category": "غير محدد",
-            "company_size": "غير محدد",
-            "required_saudi_percentage": 0,
-            "estimated_saudi_percentage": 0
-        }
-        
-        # تحديد حجم الشركة بناءً على القيمة التقديرية للمشروع
-        project_value = 0
-        if "financial_data" in extracted_data and "total_cost" in extracted_data["financial_data"]:
-            project_value = extracted_data["financial_data"]["total_cost"]["value"]
-        
-        if project_value == 0 and "text" in extracted_data:
-            # محاولة استخراج قيمة المشروع من النص
-            text = extracted_data["text"].lower()
-            value_patterns = [
-                r'قيمة المشروع[^\d]*([\d.,]+)[^\d]*(ريال|ر\.س)',
-                r'قيمة العقد[^\d]*([\d.,]+)[^\d]*(ريال|ر\.س)',
-                r'القيمة الإجمالية[^\d]*([\d.,]+)[^\d]*(ريال|ر\.س)'
-            ]
-            
-            for pattern in value_patterns:
-                matches = re.findall(pattern, text, re.IGNORECASE)
-                if matches:
-                    try:
-                        project_value = float(matches[0][0].replace(',', ''))
-                        break
-                    except:
-                        pass
-        
-        # تحديد حجم الشركة بناءً على قيمة المشروع
-        company_size = "صغيرة"
-        if project_value >= 10000000:  # أكثر من 10 مليون ريال
-            company_size = "كبيرة"
-        elif project_value >= 3000000:  # بين 3 و 10 مليون ريال
-            company_size = "متوسطة"
-        
-        nitaqat_analysis["company_size"] = company_size
-        
-        # تحديد نسبة التوطين المطلوبة
-        if sector in self.nitaqat_data and company_size in self.nitaqat_data[sector]:
-            # نفترض أننا نريد الامتثال للفئة الخضراء المتوسطة
-            required_percentage = (
-                self.nitaqat_data[sector][company_size]["أخضر متوسط"]["min"] +
-                self.nitaqat_data[sector][company_size]["أخضر متوسط"]["max"]
-            ) / 2
-            
-            nitaqat_analysis["required_saudi_percentage"] = required_percentage
-        else:
-            # قيمة افتراضية
-            nitaqat_analysis["required_saudi_percentage"] = 20
-        
-        # تقدير نسبة التوطين الفعلية
-        estimated_saudi_percentage = 0
-        
-        # إذا كانت هناك شركات معروفة في البيانات المستخرجة، نستخدم نسبة التوطين الخاصة بها
-        if "entities" in extracted_data and "organizations" in extracted_data["entities"]:
-            organizations = extracted_data["entities"]["organizations"]
-            
-            for org in organizations:
-                org_name = org["name"].lower()
-                
-                for company_id, company_data in self.local_companies.items():
-                    company_name = company_data["name"].lower()
-                    
-                    if company_name in org_name or org_name in company_name:
-                        estimated_saudi_percentage = company_data["saudi_employees_percentage"]
-                        nitaqat_analysis["nitaqat_category"] = company_data["nitaqat_category"]
-                        break
-        
-        # إذا لم نتمكن من تقدير النسبة، نستخدم قيمة افتراضية
-        if estimated_saudi_percentage == 0:
-            if "الإنشاءات" in sector:
-                estimated_saudi_percentage = 15
-            elif "تقنية المعلومات" in sector:
-                estimated_saudi_percentage = 25
-            else:
-                estimated_saudi_percentage = 20
-        
-        nitaqat_analysis["estimated_saudi_percentage"] = estimated_saudi_percentage
-        
-        # تحديد فئة نطاقات والامتثال
-        if sector in self.nitaqat_data and company_size in self.nitaqat_data[sector]:
-            for category, range_data in self.nitaqat_data[sector][company_size].items():
-                if range_data["min"] <= estimated_saudi_percentage <= range_data["max"]:
-                    nitaqat_analysis["nitaqat_category"] = category
-                    break
-        
-        # تحديد الامتثال
-        nitaqat_analysis["compliant"] = (
-            nitaqat_analysis["nitaqat_category"] != "أحمر" and
-            estimated_saudi_percentage >= nitaqat_analysis["required_saudi_percentage"]
-        )
-        
-        return nitaqat_analysis
-    
-    def _prepare_local_content_requirements(self, sector_data: Dict[str, Any], local_content_info: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        إعداد متطلبات المحتوى المحلي
-        """
-        requirements = []
-        
-        # الحد الأدنى للمحتوى المحلي
-        min_percentage = sector_data["min_percentage"]
-        target_percentage = sector_data["target_percentage"]
-        
-        # إضافة متطلب الحد الأدنى للمحتوى المحلي
-        requirements.append({
-            "title": "الحد الأدنى للمحتوى المحلي",
-            "description": f"يجب أن تكون نسبة المحتوى المحلي للمشروع لا تقل عن {min_percentage}%",
-            "importance": "عالية",
-            "category": "محتوى محلي"
-        })
-        
-        # إضافة متطلب النسبة المستهدفة للمحتوى المحلي
-        requirements.append({
-            "title": "النسبة المستهدفة للمحتوى المحلي",
-            "description": f"النسبة المستهدفة للمحتوى المحلي هي {target_percentage}% وسيتم منح نقاط إضافية للعروض التي تتجاوز الحد الأدنى",
-            "importance": "متوسطة",
-            "category": "محتوى محلي"
-        })
-        
-        # إضافة متطلب توطين الوظائف
-        requirements.append({
-            "title": "توطين الوظائف",
-            "description": "يجب أن تكون الشركة ملتزمة بمتطلبات نطاقات وأن تكون في النطاق الأخضر على الأقل",
-            "importance": "عالية",
-            "category": "محتوى محلي"
-        })
-        
-        # إضافة متطلب شهادة المحتوى المحلي
-        requirements.append({
-            "title": "شهادة المحتوى المحلي",
-            "description": "يجب تقديم شهادة المحتوى المحلي الصادرة من هيئة المحتوى المحلي والمشتريات الحكومية",
-            "importance": "عالية",
-            "category": "محتوى محلي"
-        })
-        
-        # إضافة متطلب خطة تطوير المحتوى المحلي
-        requirements.append({
-            "title": "خطة تطوير المحتوى المحلي",
-            "description": "يجب تقديم خطة لتطوير المحتوى المحلي تتضمن تفاصيل الموردين المحليين وتوطين التقنية والخبرات",
-            "importance": "متوسطة",
-            "category": "محتوى محلي"
-        })
-        
-        # إضافة متطلبات إضافية من البيانات المستخرجة
-        if local_content_info["requirements"]:
-            for i, req in enumerate(local_content_info["requirements"]):
-                requirements.append({
-                    "title": f"متطلب محتوى محلي {i+1}",
-                    "description": req,
-                    "importance": "عالية",
-                    "category": "محتوى محلي",
-                    "source": "مستخرج"
-                })
-        
-        return requirements
-    
-    def _generate_recommendations(self, overall_percentage: float, sector_data: Dict[str, Any],
-                             manpower_analysis: Dict[str, Any], materials_analysis: Dict[str, Any],
-                             services_analysis: Dict[str, Any], nitaqat_analysis: Dict[str, Any]) -> List[str]:
-        """
-        إعداد توصيات لتحسين المحتوى المحلي
-        """
-        recommendations = []
-        
-        # الحد الأدنى والنسبة المستهدفة
-        min_percentage = sector_data["min_percentage"]
-        target_percentage = sector_data["target_percentage"]
-        
-        # التحقق من الامتثال للحد الأدنى
-        if overall_percentage < min_percentage:
-            recommendations.append(
-                f"زيادة نسبة المحتوى المحلي من {overall_percentage}% إلى {min_percentage}% على الأقل للامتثال للحد الأدنى المطلوب"
-            )
-        elif overall_percentage < target_percentage:
-            recommendations.append(
-                f"زيادة نسبة المحتوى المحلي من {overall_percentage}% إلى {target_percentage}% للوصول إلى النسبة المستهدفة"
-            )
-        
-        # توصيات لتحسين القوى العاملة
-        if manpower_analysis["percentage"] < 60:
-            recommendations.append(
-                f"زيادة نسبة القوى العاملة السعودية من {manpower_analysis['percentage']}% إلى 60% على الأقل"
-            )
-        
-        # توصيات لتحسين المواد
-        if materials_analysis["percentage"] < 50:
-            recommendations.append(
-                "زيادة استخدام المواد المصنعة محلياً أو المجمعة محلياً بدلاً من المواد المستوردة"
-            )
-        
-        if materials_analysis["fully_imported"] > materials_analysis["local_manufacturing"]:
-            recommendations.append(
-                "تقليل الاعتماد على المواد المستوردة بالكامل وزيادة استخدام المواد المصنعة محلياً"
-            )
-        
-        # توصيات لتحسين الخدمات
-        if services_analysis["percentage"] < 70:
-            recommendations.append(
-                "زيادة الاعتماد على مزودي الخدمات المحليين بدلاً من المزودين الأجانب"
-            )
-        
-        if services_analysis["foreign_provider"] > services_analysis["local_service_provider"]:
-            recommendations.append(
-                "تقليل الاعتماد على مزودي الخدمات الأجانب وزيادة الاعتماد على مزودي الخدمات المحليين"
-            )
-        
-        # توصيات للامتثال لنطاقات
-        if not nitaqat_analysis["compliant"]:
-            recommendations.append(
-                f"زيادة نسبة التوطين في القوى العاملة من {nitaqat_analysis['estimated_saudi_percentage']}% إلى {nitaqat_analysis['required_saudi_percentage']}% على الأقل للامتثال لمتطلبات نطاقات"
-            )
-        
-        # توصيات عامة
-        recommendations.extend([
-            "تطوير برامج تدريب وتأهيل للكوادر السعودية لزيادة نسبة التوطين",
-            "الاستفادة من برامج دعم المحتوى المحلي المقدمة من هيئة المحتوى المحلي والمشتريات الحكومية",
-            "بناء شراكات مع المصنعين المحليين لتوطين سلسلة الإمداد",
-            "الاستفادة من حوافز القروض والتمويل المقدمة للشركات التي تساهم في زيادة المحتوى المحلي"
-        ])
-        
-        return recommendationsimport os
-import json
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Any, Union, Tuple, Optional
-from datetime import datetime
-
-class LocalContentCalculator:
-    """
-    فئة لحساب وتحليل المحتوى المحلي في المناقصات
-    """
-    
-    def __init__(self):
-        """
-        تهيئة حاسبة المحتوى المحلي
-        """
-        # تحميل بيانات المحتوى المحلي
-        self.local_content_data = self._load_local_content_data()
-        
-        # تحميل قاعدة بيانات الشركات المحلية
-        self.local_companies = self._load_local_companies()
-        
-        # تحميل نطاقات الشركات
-        self.nitaqat_data = self._load_nitaqat_data()
-        
-        # قائمة القطاعات
-        self.sectors = [
-            "الإنشاءات", "تقنية المعلومات", "الاتصالات", "الصحة",
-            "التعليم", "النقل", "الطاقة", "المياه", "البيئة",
-            "الصناعة", "التجارة", "السياحة", "الخدمات المالية"
-        ]
-    
-    def _load_local_content_data(self) -> Dict[str, Any]:
-        """
-        تحميل بيانات المحتوى المحلي
-        """
-        # في التطبيق الفعلي، قد تُحمل هذه البيانات من ملف أو قاعدة بيانات
-        return {
-            "sectors": {
-                "الإنشاءات": {
-                    "min_percentage": 30,
-                    "target_percentage": 60,
-                    "weights": {
-                        "manpower": 0.35,
-                        "materials": 0.45,
-                        "services": 0.2
-                    }
-                },
-                "تقنية المعلومات": {
-                    "min_percentage": 25,
-                    "target_percentage": 50,
-                    "weights": {
-                        "manpower": 0.55,
-                        "materials": 0.15,
-                        "services": 0.3
-                    }
-                },
-                "عام": {
-                    "min_percentage": 20,
-                    "target_percentage": 40,
-                    "weights": {
-                        "manpower": 0.4,
-                        "materials": 0.3,
-                        "services": 0.3
-                    }
-                }
-            },
-            "material_categories": {
-                "local_manufacturing": 1.0,
-                "local_assembly": 0.7,
-                "imported_with_local_value_add": 0.4,
-                "fully_imported": 0.0
-            },
-            "manpower_categories": {
-                "saudi_employee": 1.0,
-                "expat_employee": 0.0
-            },
-            "service_categories": {
-                "local_service_provider": 1.0,
-                "joint_venture": 0.6,
-                "foreign_provider_with_local_partner": 0.3,
-                "foreign_provider": 0.0
-            }
-        }
-    
-    def _load_local_companies(self) -> Dict[str, Dict[str, Any]]:
-        """
-        تحميل قاعدة بيانات الشركات المحلية
-        """
-        # في التطبيق الفعلي، قد تُحمل هذه البيانات من ملف أو قاعدة بيانات
-        return {
-            "company1": {
-                "name": "شركة البناء السعودية",
-                "cr_number": "1010XXXXXX",
-                "sector": "الإنشاءات",
-                "local_content_certificate": True,
-                "saudi_employees_percentage": 35,
-                "nitaqat_category": "أخضر متوسط",
-                "local_content_percentage": 45
-            },
-            "company2": {
-                "name": "شركة تقنية المستقبل",
-                "cr_number": "1020XXXXXX",
-                "sector": "تقنية المعلومات",
-                "local_content_certificate": True,
-                "saudi_employees_percentage": 42,
-                "nitaqat_category": "أخضر مرتفع",
-                "local_content_percentage": 52
-            },
-            "company3": {
-                "name": "مصنع المنتجات المعدنية",
-                "cr_number": "1030XXXXXX",
-                "sector": "الصناعة",
-                "local_content_certificate": True,
-                "saudi_employees_percentage": 28,
-                "nitaqat_category": "أخضر منخفض",
-                "local_content_percentage": 61
-            }
-        }
-    
-    def _load_nitaqat_data(self) -> Dict[str, Dict[str, Any]]:
-        """
-        تحميل بيانات نطاقات الشركات
-        """
-        # في التطبيق الفعلي، قد تُحمل هذه البيانات من ملف أو قاعدة بيانات
-        return {
-            "الإنشاءات": {
-                "صغيرة": {
-                    "أحمر": {"min": 0, "max": 5},
-                    "أخضر منخفض": {"min": 6, "max": 10},
-                    "أخضر متوسط": {"min": 11, "max": 15},
-                    "أخضر مرتفع": {"min": 16, "max": 25},
-                    "بلاتيني": {"min": 26, "max": 100}
-                },
-                "متوسطة": {
-                    "أحمر": {"min": 0, "max": 7},
-                    "أخضر منخفض": {"min": 8, "max": 14},
-                    "أخضر متوسط": {"min": 15, "max": 20},
-                    "أخضر مرتفع": {"min": 21, "max": 30},
-                    "بلاتيني": {"min": 31, "max": 100}
-                },
-                "كبيرة": {
-                    "أحمر": {"min": 0, "max": 9},
-                    "أخضر منخفض": {"min": 10, "max": 16},
-                    "أخضر متوسط": {"min": 17, "max": 23},
-                    "أخضر مرتفع": {"min": 24, "max": 35},
-                    "بلاتيني": {"min": 36, "max": 100}
-                }
-            },
-            "تقنية المعلومات": {
-                "صغيرة": {
-                    "أحمر": {"min": 0, "max": 6},
-                    "أخضر منخفض": {"min": 7, "max": 12},
-                    "أخضر متوسط": {"min": 13, "max": 19},
-                    "أخضر مرتفع": {"min": 20, "max": 29},
-                    "بلاتيني": {"min": 30, "max": 100}
-                },
-                "متوسطة": {
-                    "أحمر": {"min": 0, "max": 13},
-                    "أخضر منخفض": {"min": 14, "max": 20},
-                    "أخضر متوسط": {"min": 21, "max": 27},
-                    "أخضر مرتفع": {"min": 28, "max": 35},
-                    "بلاتيني": {"min": 36, "max": 100}
-                },
-                "كبيرة": {
-                    "أحمر": {"min": 0, "max": 17},
-                    "أخضر منخفض": {"min": 18, "max": 25},
-                    "أخضر متوسط": {"min": 26, "max": 33},
-                    "أخضر مرتفع": {"min": 34, "max": 40},
-                    "بلاتيني": {"min": 41, "max": 100}
-                }
-            }
-        }
