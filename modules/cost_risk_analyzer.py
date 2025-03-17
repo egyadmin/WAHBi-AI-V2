@@ -666,7 +666,4 @@ class CostRiskAnalyzer:
                     overrun_risks.append({
                         "category": category,
                         "planned": planned,
-                        "actual": actual,
-                        "deviation_percentage": deviation_percentage,
-                        "risk_level": risk_level,
-                        "impact": "تأثير على هامش الربح وزيادة التكاليف ال
+                        "actual": actual
