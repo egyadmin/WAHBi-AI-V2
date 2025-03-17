@@ -1,4 +1,13 @@
 import streamlit as st
+
+# ✅ تأكد أن `set_page_config` هو أول أمر بعد استيراد `streamlit`
+st.set_page_config(
+    page_title="تحليل المناقصات والعقود",
+    page_icon="📋",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,14 +17,6 @@ import plotly.graph_objects as go
 from datetime import datetime
 import os
 import sys
-
-# ✅ تأكد أن `set_page_config` هو أول أمر بعد الاستيراد
-st.set_page_config(
-    page_title="تحليل المناقصات والعقود",
-    page_icon="📋",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # إضافة المسار الرئيسي للمشروع إلى PATH
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -30,7 +31,6 @@ from modules.supply_chain import SupplyChainAnalyzer
 from modules.ai_models import LLMProcessor, ArabicBERTModel
 from utils.database import VectorDBConnector, TemplateLoader
 from utils.api_integrations import MunafasatAPI, EtimadAPI, BaladyAPI
-
 
 # تكوين الصفحة
 st.set_page_config(
