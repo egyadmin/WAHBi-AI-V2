@@ -666,4 +666,12 @@ class CostRiskAnalyzer:
                     overrun_risks.append({
                         "category": category,
                         "planned": planned,
-                        "actual": actual
+                        "actual": actual,
+                        "deviation_percentage": deviation_percentage,
+                        "risk_level": risk_level,
+                    "impact": "تأثير على هامش الربح وزيادة التكاليف الإجمالية",
+                    "mitigation": self._generate_overrun_mitigation(category, deviation_percentage)
+                })
+    
+    # ترتيب المخاطر حسب نسبة التجاوز
+    return sorted(overrun_risks, key=lambda x: x["deviation_percentage"], reverse=True)
