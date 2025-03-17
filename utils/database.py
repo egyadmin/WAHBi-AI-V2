@@ -582,13 +582,28 @@ class TemplateLoader:
             return True
         except Exception as e:
             print(f"Error saving template: {str(e)}")
-            return Falseإنشاء مبنى إداري من 4 طوابق بمساحة 2000 متر مربع في مدينة الرياض",
-                "vector": np.random.rand(384).tolist(),  # تمثيل المتجه كقائمة
-                "metadata": {
-                    "sector": "الإنشاءات",
-                    "location": "الرياض",
-                    "date": "2023-05-15"
-                }
-            },
-            "tender2": {
-                "text": "مناقصة ل
+import numpy as np
+
+tenders = {
+    "tender1": {
+        "text": "إنشاء مبنى إداري من 4 طوابق بمساحة 2000 متر مربع في مدينة الرياض",
+        "vector": np.random.rand(384).tolist(),  # تمثيل المتجه كقائمة
+        "metadata": {
+            "sector": "الإنشاءات",
+            "location": "الرياض",
+            "date": "2023-05-15"
+        }
+    },
+    "tender2": {
+        "text": "مناقصة لبناء مجمع سكني في جدة بمساحة 5000 متر مربع",
+        "vector": np.random.rand(384).tolist(),
+        "metadata": {
+            "sector": "الإنشاءات",
+            "location": "جدة",
+            "date": "2023-06-10"
+        }
+    }
+}
+
+# طباعة بيانات المناقصة الأولى كمثال
+print(tenders["tender1"])
