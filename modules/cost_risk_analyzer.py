@@ -637,49 +637,36 @@ class CostRiskAnalyzer:
         costs : Dict[str, Any]
             بيانات التكاليف
             
-    def _analyze_cost_overrun_risks(self, costs: Dict[str, Dict[str, float]]) -> List[Dict[str, Any]]:
-        """
-        تحليل مخاطر تجاوز التكاليف.
-
-        المعاملات:
-        ----------
-        costs : Dict[str, Dict[str, float]]
-            قاموس يحتوي على التكاليف الفعلية والمخططة للمشروع.
-
         المخرجات:
         --------
         List[Dict[str, Any]]
-            قائمة مخاطر تجاوز التكاليف.
+            قائمة مخاطر تجاوز التكاليف
         """
         # استخراج التكاليف الفعلية والمخططة
         actual_costs = costs.get("actual", {})
         planned_costs = costs.get("planned", {})
-
+        
         overrun_risks = []
-
+        
         if not actual_costs or not planned_costs:
             return overrun_risks
-
+        
         # تحليل الانحرافات لكل فئة وتحديد المخاطر
-        for category in set(actual_costs.keys()).union(planned_costs.keys()):
+        for category in set(list(actual_costs.keys()) + list(planned_costs.keys())):
             actual = actual_costs.get(category, 0)
             planned = planned_costs.get(category, 0)
-
+            
             if planned > 0:
                 deviation_percentage = ((actual - planned) / planned) * 100
-
+                
                 # إذا كان هناك تجاوز، أضف المخاطرة
                 if deviation_percentage > 5:
                     risk_level = "مرتفع" if deviation_percentage > 20 else "متوسط" if deviation_percentage > 10 else "منخفض"
-
+                    
                     overrun_risks.append({
                         "category": category,
                         "planned": planned,
                         "actual": actual,
-                        "deviation_percentage": round(deviation_percentage, 2),
+                        "deviation_percentage": deviation_percentage,
                         "risk_level": risk_level,
-                        "impact": "تأثير على هامش الربح وزيادة التكاليف",
-                        "mitigation": "مراجعة الميزانية وإيجاد بدائل أقل تكلفة"
-                    })
-
-        return overrun_risks
+                        "impact": "تأثير على هامش الربح وزيادة التكاليف ال
