@@ -12,4 +12,4 @@ env/
 
 # تجاهل ملفات النظام
 .DS_Store
-Thumbs.db
+Thumbs.db.env
